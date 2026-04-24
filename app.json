@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Uplift Reel",
+    "slug": "uplift-reel",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.upliftreel.app"
+    },
+    "android": {
+      "package": "com.upliftreel.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-notifications"
+    ]
+  }
+}
