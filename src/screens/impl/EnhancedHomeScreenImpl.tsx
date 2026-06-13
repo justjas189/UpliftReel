@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -22,6 +22,12 @@ import {
   StitchStreamingBadge,
   StitchTypography,
 } from '../../components/StitchUI';
+import {
+  buildTmdbPosterUrl,
+  fetchRecommendations,
+  TMDBMovie,
+} from '../../services/tmdb';
+import { fetchMovieRating } from '../../services/omdb';
 
 interface HomeScreenProps {
   navigation: any;
@@ -39,6 +45,33 @@ const titleCase = (value: string): string =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
+const TMDB_GENRE_LABELS: Record<number, string> = {
+  28: 'Action',
+  12: 'Adventure',
+  16: 'Animation',
+  35: 'Comedy',
+  80: 'Crime',
+  99: 'Documentary',
+  18: 'Drama',
+  10751: 'Family',
+  14: 'Fantasy',
+  36: 'History',
+  27: 'Horror',
+  10402: 'Music',
+  9648: 'Mystery',
+  10749: 'Romance',
+  878: 'Sci-Fi',
+  10770: 'TV Movie',
+  53: 'Thriller',
+  10752: 'War',
+  37: 'Western',
+};
+
+const mapTmdbGenres = (genreIds: number[]): string[] =>
+  genreIds
+    .map((genreId) => TMDB_GENRE_LABELS[genreId])
+    .filter((genreName): genreName is string => Boolean(genreName));
+
 const EnhancedHomeScreenImpl: React.FC<HomeScreenProps> = ({ navigation }) => {
   const {
     state,
@@ -51,9 +84,59 @@ const EnhancedHomeScreenImpl: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [localRating, setLocalRating] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [tmdbMovie, setTmdbMovie] = useState<TMDBMovie | null>(null);
+  const [tmdbLoading, setTmdbLoading] = useState(false);
+  const [tmdbError, setTmdbError] = useState<string | null>(null);
+  const [imdbRating, setImdbRating] = useState<number | null>(null);
 
   const recommendation = state.todaysRecommendation;
   const movie = recommendation?.movie;
+
+  const loadTmdbRecommendation = useCallback(async (showLoader = true) => {
+    if (showLoader) {
+      setTmdbLoading(true);
+    }
+
+    setTmdbError(null);
+    setImdbRating(null);
+
+    try {
+      const recommendations = await fetchRecommendations();
+      const selectedMovie = recommendations[0] ?? null;
+      setTmdbMovie(selectedMovie);
+
+      if (selectedMovie) {
+        try {
+          const releaseYear = selectedMovie.release_date
+            ? Number(selectedMovie.release_date.slice(0, 4))
+            : undefined;
+
+          const ratingValue = await fetchMovieRating(selectedMovie.title, releaseYear);
+          const parsedRating = ratingValue ? Number.parseFloat(ratingValue) : NaN;
+
+          if (!Number.isNaN(parsedRating)) {
+            setImdbRating(parsedRating);
+          }
+        } catch (error) {
+          console.error('Failed to bridge TMDB movie to OMDb rating:', error);
+        }
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to fetch TMDB recommendations.';
+      setTmdbError(message);
+    } finally {
+      if (showLoader) {
+        setTmdbLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTmdbRecommendation().catch(() => {
+      // Error state is already handled in local state.
+    });
+  }, [loadTmdbRecommendation]);
 
   useEffect(() => {
     if (
@@ -78,7 +161,13 @@ const EnhancedHomeScreenImpl: React.FC<HomeScreenProps> = ({ navigation }) => {
     setRefreshing(true);
     clearError();
     try {
-      await generateTodaysRecommendation();
+      const refreshTasks: Promise<unknown>[] = [loadTmdbRecommendation(false)];
+
+      if (state.userPreferences && state.movieDatabase.length > 0) {
+        refreshTasks.push(generateTodaysRecommendation());
+      }
+
+      await Promise.all(refreshTasks);
     } finally {
       setRefreshing(false);
     }
@@ -103,6 +192,10 @@ const EnhancedHomeScreenImpl: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const handleViewDetails = () => {
     if (!movie) {
+      Alert.alert(
+        'Details unavailable',
+        'Detailed navigation is currently available for personalized recommendations only.'
+      );
       return;
     }
 
@@ -152,29 +245,37 @@ const EnhancedHomeScreenImpl: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   const handleShare = async () => {
-    if (!movie) {
+    const shareTitle = tmdbMovie?.title ?? movie?.title;
+    const shareRating = imdbRating ?? tmdbMovie?.vote_average ?? movie?.imdbRating;
+    const shareYear = tmdbMovie?.release_date
+      ? Number(tmdbMovie.release_date.slice(0, 4))
+      : movie?.releaseYear;
+
+    if (!shareTitle || !shareRating) {
       return;
     }
 
     try {
       await Share.share({
-        title: `Uplift Reel pick: ${movie.title}`,
-        message: `${movie.title} (${movie.releaseYear}) - IMDb ${movie.imdbRating}`,
+        title: `Uplift Reel pick: ${shareTitle}`,
+        message: `${shareTitle}${shareYear ? ` (${shareYear})` : ''} - ${
+          imdbRating !== null ? 'IMDb' : tmdbMovie ? 'TMDB' : 'IMDb'
+        } ${shareRating.toFixed(1)}`,
       });
     } catch (_error) {
       // Ignore share dismissal/error.
     }
   };
 
-  if (state.isLoading && !movie) {
+  if ((state.isLoading || tmdbLoading) && !movie && !tmdbMovie) {
     return (
       <SafeAreaView style={stitchCommonStyles.safeArea}>
-        <StitchLoading label="Building your daily recommendation..." />
+        <StitchLoading label="Loading today's movie picks..." />
       </SafeAreaView>
     );
   }
 
-  if (!movie) {
+  if (!movie && !tmdbMovie) {
     return (
       <SafeAreaView style={stitchCommonStyles.safeArea}>
         <StitchHeader title="Uplift Reel" onMenuPress={handleOpenHistory} onAvatarPress={handleOpenProfile} />
@@ -199,7 +300,37 @@ const EnhancedHomeScreenImpl: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
   }
 
-  const genres = movie.genre.map(titleCase);
+  const tmdbGenres = tmdbMovie ? mapTmdbGenres(tmdbMovie.genre_ids) : [];
+  const genres = tmdbMovie
+    ? tmdbGenres.length > 0
+      ? tmdbGenres
+      : ['Popular']
+    : movie
+    ? movie.genre.map(titleCase)
+    : ['Popular'];
+
+  const displayTitle = tmdbMovie?.title ?? movie?.title ?? 'Movie Pick';
+  const displaySynopsis = tmdbMovie?.overview || movie?.synopsis || 'No synopsis available.';
+  const displayRating = imdbRating ?? tmdbMovie?.vote_average ?? movie?.imdbRating ?? 0;
+  const displayStarRating = displayRating / 2;
+  const displayRatingSource = imdbRating !== null ? 'IMDb' : tmdbMovie ? 'TMDB' : 'IMDb';
+  const displayReleaseYear = tmdbMovie?.release_date
+    ? Number(tmdbMovie.release_date.slice(0, 4))
+    : movie?.releaseYear;
+  const displayPosterUri = tmdbMovie
+    ? buildTmdbPosterUrl(tmdbMovie.poster_path)
+    : movie?.posterUrl;
+  const displaySubtitle = tmdbMovie ? 'Trending now on TMDB' : '';
+
+  const metaSegments: string[] = [];
+  if (displayReleaseYear) {
+    metaSegments.push(`${displayReleaseYear}`);
+  }
+  if (!tmdbMovie && movie) {
+    metaSegments.push(formatRuntime(movie.runtime));
+  }
+  metaSegments.push(`${displayRatingSource} ${displayRating.toFixed(1)}`);
+  const displayMeta = metaSegments.join(' • ');
 
   return (
     <SafeAreaView style={stitchCommonStyles.safeArea}>
@@ -226,14 +357,25 @@ const EnhancedHomeScreenImpl: React.FC<HomeScreenProps> = ({ navigation }) => {
             Find the perfect movie for your current vibe.
           </StitchTypography>
           <StitchButton title="Set Mood" variant="secondary" onPress={handleSetMood} style={styles.moodButton} icon="happy-outline" />
+          {tmdbLoading ? (
+            <StitchTypography variant="caption" color={StitchDesignSystem.colors.textSecondary}>
+              Syncing live TMDB data...
+            </StitchTypography>
+          ) : null}
+          {tmdbError ? (
+            <StitchTypography variant="caption" color={StitchDesignSystem.colors.accent}>
+              Live TMDB sync failed. Showing fallback data.
+            </StitchTypography>
+          ) : null}
         </View>
 
         <StitchMovieHero
-          title={movie.title}
-          subtitle=""
+          title={displayTitle}
+          subtitle={displaySubtitle}
           genres={genres.slice(0, 2)}
-          meta={`${movie.releaseYear} • ${formatRuntime(movie.runtime)} • IMDb ${movie.imdbRating}`}
-          onPress={handleViewDetails}
+          meta={displayMeta}
+          posterUri={displayPosterUri}
+          onPress={movie ? handleViewDetails : undefined}
         />
 
         <View style={styles.detailsGrid}>
@@ -242,7 +384,7 @@ const EnhancedHomeScreenImpl: React.FC<HomeScreenProps> = ({ navigation }) => {
               SYNOPSIS
             </StitchTypography>
             <StitchTypography variant="bodySm" color={StitchDesignSystem.colors.textSecondary} style={styles.synopsisText}>
-              {movie.synopsis}
+              {displaySynopsis}
             </StitchTypography>
           </StitchCard>
 
@@ -251,9 +393,9 @@ const EnhancedHomeScreenImpl: React.FC<HomeScreenProps> = ({ navigation }) => {
               RATING
             </StitchTypography>
             <StitchTypography variant="h1" weight="semibold" color={StitchDesignSystem.colors.primary}>
-              {movie.imdbRating}/10
+              {displayRating.toFixed(1)}/10
             </StitchTypography>
-            <StitchRatingStars rating={movie.imdbRating / 2} />
+            <StitchRatingStars rating={displayStarRating} />
           </StitchCard>
 
           <StitchCard style={styles.infoTile}>
@@ -285,18 +427,32 @@ const EnhancedHomeScreenImpl: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
 
           <View style={styles.buttonRow}>
-            <StitchButton title="Watch Trailer" variant="outline" onPress={handleWatchTrailer} style={styles.halfButton} icon="play" />
-            <StitchButton title="View Details" onPress={handleViewDetails} style={styles.halfButton} icon="information-circle-outline" />
+            <StitchButton
+              title="Watch Trailer"
+              variant="outline"
+              onPress={handleWatchTrailer}
+              style={styles.halfButton}
+              icon="play"
+              disabled={!movie}
+            />
+            <StitchButton
+              title="View Details"
+              onPress={handleViewDetails}
+              style={styles.halfButton}
+              icon="information-circle-outline"
+              disabled={!movie}
+            />
           </View>
 
           <StitchButton
             title={isBusy ? 'Saving...' : 'Watched It'}
             onPress={handleMarkAsWatched}
             loading={isBusy}
+            disabled={!movie}
             fullWidth
             icon="checkmark-outline"
           />
-          <StitchButton title="Skip for now" variant="ghost" onPress={handleSkipForNow} fullWidth />
+          <StitchButton title="Skip for now" variant="ghost" onPress={handleSkipForNow} disabled={!movie} fullWidth />
           <StitchButton title="Share" variant="ghost" onPress={handleShare} fullWidth />
         </StitchCard>
       </ScrollView>

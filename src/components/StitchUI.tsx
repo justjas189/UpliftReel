@@ -2,6 +2,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   GestureResponderEvent,
+  Image,
   StyleSheet,
   Text,
   TextStyle,
@@ -244,15 +245,27 @@ interface StitchMovieHeroProps {
   subtitle: string;
   genres: string[];
   meta: string;
+  posterUri?: string;
   onPress?: () => void;
 }
 
-export const StitchMovieHero: React.FC<StitchMovieHeroProps> = ({ title, subtitle, genres, meta, onPress }) => {
+export const StitchMovieHero: React.FC<StitchMovieHeroProps> = ({
+  title,
+  subtitle,
+  genres,
+  meta,
+  posterUri,
+  onPress,
+}) => {
   return (
     <TouchableOpacity activeOpacity={0.92} onPress={onPress} style={styles.heroCard}>
-      <View style={styles.heroPosterPlaceholder}>
-        <Text style={styles.heroPosterText}>Poster</Text>
-      </View>
+      {posterUri ? (
+        <Image source={{ uri: posterUri }} resizeMode="cover" style={styles.heroPosterImage} />
+      ) : (
+        <View style={styles.heroPosterPlaceholder}>
+          <Text style={styles.heroPosterText}>Poster</Text>
+        </View>
+      )}
       <View style={styles.heroOverlay} />
       <View style={styles.heroContent}>
         <StitchTypography variant="h1" weight="semibold" color={StitchDesignSystem.colors.textInverse}>
@@ -289,6 +302,8 @@ export const StitchRatingStars: React.FC<StitchRatingStarsProps> = ({ rating, ma
     <View style={styles.ratingRow}>
       {Array.from({ length: max }).map((_, index) => {
         const value = index + 1;
+        const isFull = value <= rating;
+        const isHalf = !isFull && value - 0.5 <= rating;
         return (
           <TouchableOpacity
             key={value}
@@ -297,9 +312,9 @@ export const StitchRatingStars: React.FC<StitchRatingStarsProps> = ({ rating, ma
             disabled={!onRate}
           >
             <Ionicons
-              name={value <= rating ? 'star' : 'star-outline'}
+              name={isFull ? 'star' : isHalf ? 'star-half' : 'star-outline'}
               size={20}
-              color={value <= rating ? StitchDesignSystem.colors.accent : StitchDesignSystem.colors.borderStrong}
+              color={isFull || isHalf ? StitchDesignSystem.colors.accent : StitchDesignSystem.colors.borderStrong}
             />
           </TouchableOpacity>
         );
@@ -460,6 +475,9 @@ const styles = StyleSheet.create({
     minHeight: 400,
     backgroundColor: '#202A3A',
     ...StitchDesignSystem.shadows.hero,
+  },
+  heroPosterImage: {
+    ...StyleSheet.absoluteFillObject,
   },
   heroPosterPlaceholder: {
     ...StyleSheet.absoluteFillObject,
