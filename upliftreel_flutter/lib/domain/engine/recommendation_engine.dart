@@ -27,6 +27,11 @@ class RecommendationEngine {
   static const double _moodWeight = 15;
   static const double _runtimeWeight = 10;
 
+  /// Hard matchmaking gate: a pick whose normalized [compatibilityPercent]
+  /// falls below this is flagged [RecommendationResult.isBelowThreshold] so
+  /// the UI can warn the user it didn't clear their bar.
+  static const double _minCompatibility = 75;
+
   static const int _seriousnessTolerance = 2;
 
   static const Map<Mood, List<MoodTag>> _moodToTags = {
@@ -96,10 +101,18 @@ class RecommendationEngine {
     filtered = _removeRecentMovies(filtered, context);
 
     if (filtered.isNotEmpty) {
+      // Compatibility is matchScore / applicableWeight, and applicableWeight is
+      // constant across this context, so argmax(matchScore) == argmax(
+      // compatibility): the legacy best pick is also the highest-compatibility
+      // pick. The 75% gate therefore reduces to flagging that single best —
+      // if it doesn't clear the bar, nothing in the pool does.
       final (movie, score) = _selectBestMatch(filtered, context);
+      final compatibility = compatibilityPercent(movie, context);
       return RecommendationResult(
         movie: movie,
         matchScore: score,
+        compatibility: compatibility,
+        isBelowThreshold: compatibility < _minCompatibility,
         explanation: _generateExplanation(movie, context, score),
         isAlternative: false,
       );
@@ -109,6 +122,39 @@ class RecommendationEngine {
         _fallbackRecommendation(context, movieDatabase);
   }
 
+  /// Normalized 0–100 match compatibility: [calculateMatchScore] as a
+  /// percentage of the weight actually in play for this context. A movie that
+  /// nails every applicable criterion scores 100 regardless of whether the
+  /// user set a mood, preferred people, or a runtime cap.
+  double compatibilityPercent(Movie movie, RecommendationContext context) {
+    final applicable = _applicableWeight(context);
+    if (applicable == 0) return 0;
+    return (calculateMatchScore(movie, context) / applicable * 100).clamp(
+      0,
+      100,
+    );
+  }
+
+  /// Sum of the scoring weights that can contribute for this context. Genre and
+  /// rating always apply (a valid profile has ≥1 genre); the rest are
+  /// conditional on the user having set them, mirroring [calculateMatchScore].
+  double _applicableWeight(RecommendationContext context) {
+    final prefs = context.userPreferences;
+    var weight = _genreWeight + _ratingWeight;
+
+    if (prefs.preferredActors.isNotEmpty) weight += _actorBonus;
+    if (prefs.preferredDirectors.isNotEmpty) weight += _directorBonus;
+
+    final mood = context.currentMood;
+    if (mood != null && (_moodToTags[mood.mood]?.isNotEmpty ?? false)) {
+      weight += _moodWeight;
+    }
+
+    if (prefs.maxRuntime != null) weight += _runtimeWeight;
+
+    return weight;
+  }
+
   List<Movie> _applyHardFilters(
     List<Movie> movies,
     RecommendationContext context,
@@ -116,8 +162,7 @@ class RecommendationEngine {
     final prefs = context.userPreferences;
 
     return movies.where((movie) {
-      final hasMatchingGenre =
-          movie.genres.any(prefs.selectedGenres.contains);
+      final hasMatchingGenre = movie.genres.any(prefs.selectedGenres.contains);
       if (!hasMatchingGenre) return false;
 
       if (movie.imdbRating < prefs.minRating ||
@@ -135,6 +180,16 @@ class RecommendationEngine {
         return false;
       }
 
+      // Transient Era Selector overlay, intersected on top of the persisted
+      // range above. Enforced here as well as at the TMDB query so the
+      // English /movie/popular path (which can't pre-filter by year) is
+      // still era-correct.
+      final era = context.eraRange;
+      if (era != null &&
+          (movie.releaseYear < era.min || movie.releaseYear > era.max)) {
+        return false;
+      }
+
       final maxRuntime = prefs.maxRuntime;
       if (maxRuntime != null && movie.runtime > maxRuntime) return false;
 
@@ -149,34 +204,54 @@ class RecommendationEngine {
       final hasMoodMatch = movie.moodTags.any(moodTags.contains);
       final seriousnessMatch =
           (_movieSeriousness(movie) - moodInput.seriousness).abs() <=
-              _seriousnessTolerance;
+          _seriousnessTolerance;
       return hasMoodMatch && seriousnessMatch;
     }).toList();
   }
 
   int _movieSeriousness(Movie movie) {
-    final total = movie.genres
-        .fold<int>(0, (sum, genre) => sum + _genreSeriousness[genre]!);
+    final total = movie.genres.fold<int>(
+      0,
+      (sum, genre) => sum + _genreSeriousness[genre]!,
+    );
     return (total / movie.genres.length).round();
   }
 
+  /// Zero-duplication guard: cross-references the active recommendation queue
+  /// ([RecommendationContext.previousRecommendationIds], the recency window the
+  /// controller passes) against the user's watch history
+  /// ([RecommendationContext.watchedMovieIds]) and drops any candidate present
+  /// in either, so a movie is never surfaced twice.
   List<Movie> _removeRecentMovies(
     List<Movie> movies,
     RecommendationContext context,
   ) {
-    return movies
-        .where((movie) =>
-            !context.previousRecommendationIds.contains(movie.id) &&
-            !context.watchedMovieIds.contains(movie.id))
-        .toList();
+    final seen = {
+      ...context.previousRecommendationIds,
+      ...context.watchedMovieIds,
+    };
+    return movies.where((movie) => !seen.contains(movie.id)).toList();
+  }
+
+  /// Era + dedup predicate shared by the edge-case relaxation strategies, so a
+  /// relaxed pick still honors the Era Selector and never repeats a movie.
+  bool _withinEraAndUnseen(Movie movie, RecommendationContext context) {
+    final era = context.eraRange;
+    if (era != null &&
+        (movie.releaseYear < era.min || movie.releaseYear > era.max)) {
+      return false;
+    }
+    return !context.previousRecommendationIds.contains(movie.id) &&
+        !context.watchedMovieIds.contains(movie.id);
   }
 
   double calculateMatchScore(Movie movie, RecommendationContext context) {
     final prefs = context.userPreferences;
     var score = 0.0;
 
-    final matchingGenres =
-        movie.genres.where(prefs.selectedGenres.contains).length;
+    final matchingGenres = movie.genres
+        .where(prefs.selectedGenres.contains)
+        .length;
     score += matchingGenres / prefs.selectedGenres.length * _genreWeight;
 
     // Legacy divided by (max - min) unguarded; equal bounds gave NaN. A movie
@@ -245,8 +320,7 @@ class RecommendationEngine {
           movie.imdbRating >= relaxedMin &&
           movie.imdbRating <= relaxedMax &&
           !prefs.excludedMovieIds.contains(movie.id) &&
-          !context.previousRecommendationIds.contains(movie.id) &&
-          !context.watchedMovieIds.contains(movie.id);
+          _withinEraAndUnseen(movie, context);
     }).toList();
 
     if (relaxedRating.isNotEmpty) {
@@ -258,6 +332,9 @@ class RecommendationEngine {
       return RecommendationResult(
         movie: movie,
         matchScore: score,
+        compatibility: compatibilityPercent(movie, context),
+        isBelowThreshold:
+            compatibilityPercent(movie, context) < _minCompatibility,
         explanation: _generateAlternativeExplanation(
           movie,
           context,
@@ -281,8 +358,7 @@ class RecommendationEngine {
           movie.imdbRating >= prefs.minRating &&
           movie.imdbRating <= prefs.maxRating &&
           !prefs.excludedMovieIds.contains(movie.id) &&
-          !context.previousRecommendationIds.contains(movie.id) &&
-          !context.watchedMovieIds.contains(movie.id);
+          _withinEraAndUnseen(movie, context);
     }).toList();
 
     if (expandedGenre.isNotEmpty) {
@@ -290,6 +366,9 @@ class RecommendationEngine {
       return RecommendationResult(
         movie: movie,
         matchScore: score,
+        compatibility: compatibilityPercent(movie, context),
+        isBelowThreshold:
+            compatibilityPercent(movie, context) < _minCompatibility,
         explanation: _generateAlternativeExplanation(
           movie,
           context,
@@ -310,14 +389,17 @@ class RecommendationEngine {
     RecommendationContext context,
     List<Movie> movieDatabase,
   ) {
-    final fallbacks = movieDatabase
-        .where((movie) =>
-            movie.genres
-                .any(context.userPreferences.selectedGenres.contains) &&
-            !context.previousRecommendationIds.contains(movie.id) &&
-            !context.watchedMovieIds.contains(movie.id))
-        .toList()
-      ..sort((a, b) => b.imdbRating.compareTo(a.imdbRating));
+    final fallbacks =
+        movieDatabase
+            .where(
+              (movie) =>
+                  movie.genres.any(
+                    context.userPreferences.selectedGenres.contains,
+                  ) &&
+                  _withinEraAndUnseen(movie, context),
+            )
+            .toList()
+          ..sort((a, b) => b.imdbRating.compareTo(a.imdbRating));
 
     final movie = fallbacks.isNotEmpty
         ? fallbacks.first
@@ -326,6 +408,11 @@ class RecommendationEngine {
     return RecommendationResult(
       movie: movie,
       matchScore: 50,
+      compatibility: compatibilityPercent(movie, context),
+      // A crowd-favorite fallback never clears the user's own bar by
+      // definition; flag it so the UI is honest about the stretch.
+      isBelowThreshold:
+          compatibilityPercent(movie, context) < _minCompatibility,
       explanation:
           "We couldn't find a perfect match for your current preferences, "
           'so here\'s a highly-rated '
@@ -346,11 +433,14 @@ class RecommendationEngine {
     final prefs = context.userPreferences;
     final parts = <String>[];
 
-    final matchingGenres =
-        movie.genres.where(prefs.selectedGenres.contains).toList();
+    final matchingGenres = movie.genres
+        .where(prefs.selectedGenres.contains)
+        .toList();
     if (matchingGenres.isNotEmpty) {
-      parts.add('This ${matchingGenres.map((g) => g.label).join('/')} film '
-          'matches your genre preferences');
+      parts.add(
+        'This ${matchingGenres.map((g) => g.label).join('/')} film '
+        'matches your genre preferences',
+      );
     }
 
     if (movie.imdbRating >= prefs.minRating) {
@@ -359,9 +449,7 @@ class RecommendationEngine {
 
     final mood = context.currentMood;
     if (mood != null) {
-      parts.add(
-        'and fits your current ${_moodDescriptions[mood.mood]} mood',
-      );
+      parts.add('and fits your current ${_moodDescriptions[mood.mood]} mood');
     }
 
     final matchingActor = movie.actors

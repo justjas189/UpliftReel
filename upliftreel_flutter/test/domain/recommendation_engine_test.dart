@@ -106,8 +106,11 @@ void main() {
       final result = engine.findBestMatch(
         RecommendationContext(
           userPreferences: prefs(),
-          currentMood:
-              const MoodInput(mood: Mood.happy, intensity: 5, seriousness: 2),
+          currentMood: const MoodInput(
+            mood: Mood.happy,
+            intensity: 5,
+            seriousness: 2,
+          ),
         ),
         db,
       );
@@ -136,8 +139,11 @@ void main() {
             preferredDirectors: ['Wes Anderson'],
             maxRuntime: 180,
           ),
-          currentMood:
-              const MoodInput(mood: Mood.happy, intensity: 5, seriousness: 5),
+          currentMood: const MoodInput(
+            mood: Mood.happy,
+            intensity: 5,
+            seriousness: 5,
+          ),
         ),
       );
 
@@ -146,19 +152,21 @@ void main() {
       expect(score, 95.0);
     });
 
-    test('minRating == maxRating yields finite full rating score (bug fix)',
-        () {
-      final score = engine.calculateMatchScore(
-        movie(imdbRating: 8.8),
-        RecommendationContext(
-          userPreferences: prefs(minRating: 8.8, maxRating: 8.8),
-        ),
-      );
+    test(
+      'minRating == maxRating yields finite full rating score (bug fix)',
+      () {
+        final score = engine.calculateMatchScore(
+          movie(imdbRating: 8.8),
+          RecommendationContext(
+            userPreferences: prefs(minRating: 8.8, maxRating: 8.8),
+          ),
+        );
 
-      expect(score.isFinite, isTrue);
-      // genre 1/2*40 = 20, rating full 20.
-      expect(score, 40.0);
-    });
+        expect(score.isFinite, isTrue);
+        // genre 1/2*40 = 20, rating full 20.
+        expect(score, 40.0);
+      },
+    );
   });
 
   group('recency', () {
@@ -247,10 +255,12 @@ void main() {
         userPreferences: prefs(selectedGenres: [Genre.comedy]),
       );
 
-      final a = RecommendationEngine(random: Random(7))
-          .findBestMatch(context, db);
-      final b = RecommendationEngine(random: Random(7))
-          .findBestMatch(context, db);
+      final a = RecommendationEngine(
+        random: Random(7),
+      ).findBestMatch(context, db);
+      final b = RecommendationEngine(
+        random: Random(7),
+      ).findBestMatch(context, db);
 
       expect(a.movie.id, b.movie.id);
       expect(a.matchScore, 50);
@@ -277,8 +287,11 @@ void main() {
             preferredDirectors: ['Wes Anderson'],
             maxRuntime: 180,
           ),
-          currentMood:
-              const MoodInput(mood: Mood.happy, intensity: 5, seriousness: 5),
+          currentMood: const MoodInput(
+            mood: Mood.happy,
+            intensity: 5,
+            seriousness: 5,
+          ),
         ),
         db,
       );
@@ -288,6 +301,83 @@ void main() {
       expect(result.explanation, contains('upbeat mood'));
       expect(result.explanation, contains('Ralph Fiennes'));
       expect(result.explanation, contains('Wes Anderson'));
+    });
+  });
+
+  group('compatibility (normalized %)', () {
+    test('100% when the movie nails every applicable criterion', () {
+      // Only genre + rating apply (no mood/people/runtime), so denom = 60.
+      final score = engine.compatibilityPercent(
+        movie(genres: [Genre.comedy], imdbRating: 10.0),
+        RecommendationContext(
+          userPreferences: prefs(selectedGenres: [Genre.comedy]),
+        ),
+      );
+      expect(score, 100.0);
+    });
+
+    test('normalizes against applicable weight, ignoring unset criteria', () {
+      // genre 40 + rating (6.5-6)/4*20 = 2.5 → 42.5 of 60 applicable = 70.83%.
+      final score = engine.compatibilityPercent(
+        movie(genres: [Genre.comedy], imdbRating: 6.5),
+        RecommendationContext(
+          userPreferences: prefs(selectedGenres: [Genre.comedy]),
+        ),
+      );
+      expect(score, closeTo(70.83, 0.01));
+    });
+  });
+
+  group('75% match gate', () {
+    test('does not flag a pick that clears the bar', () {
+      final result = engine.findBestMatch(
+        RecommendationContext(
+          userPreferences: prefs(selectedGenres: [Genre.comedy]),
+        ),
+        [
+          movie(genres: [Genre.comedy], imdbRating: 10.0),
+        ],
+      );
+
+      expect(result.compatibility, 100.0);
+      expect(result.isBelowThreshold, isFalse);
+    });
+
+    test('flags the best-available pick when nothing clears 75%', () {
+      // Best comedy is only a 70.83% match → still returned, but flagged.
+      final result = engine.findBestMatch(
+        RecommendationContext(
+          userPreferences: prefs(selectedGenres: [Genre.comedy]),
+        ),
+        [
+          movie(id: 'weak', genres: [Genre.comedy], imdbRating: 6.5),
+        ],
+      );
+
+      expect(result.movie.id, 'weak');
+      expect(result.isBelowThreshold, isTrue);
+      expect(result.compatibility, closeTo(70.83, 0.01));
+      // The gate is orthogonal to the edge-case alternative flag.
+      expect(result.isAlternative, isFalse);
+    });
+  });
+
+  group('era filter', () {
+    test('excludes movies outside the active era window', () {
+      final db = [
+        movie(id: 'too-old', releaseYear: 2005),
+        movie(id: 'in-era', releaseYear: 2015),
+      ];
+
+      final result = engine.findBestMatch(
+        RecommendationContext(
+          userPreferences: prefs(selectedGenres: [Genre.comedy]),
+          eraRange: const ReleaseYearRange(min: 2010, max: 2019),
+        ),
+        db,
+      );
+
+      expect(result.movie.id, 'in-era');
     });
   });
 }

@@ -1,12 +1,17 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../domain/models/auth_user.dart';
+import '../../../../state/auth_controller.dart';
 import '../../../../state/history_providers.dart';
 import '../../../../state/providers.dart';
 import '../../../core/theme/stitch_mood_icons.dart';
 import '../../../core/theme/stitch_theme.dart';
+import '../../../core/widgets/stitch_button.dart';
 import '../../../core/widgets/stitch_movie_card.dart';
+import '../../auth/views/auth_sheet.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -28,6 +33,7 @@ class ProfileScreen extends ConsumerWidget {
               .round();
     final insights = ref.watch(moodRepositoryProvider).insights();
     final hasMoodHistory = insights.moodFrequency.isNotEmpty;
+    final user = ref.watch(authControllerProvider).value;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
@@ -38,30 +44,29 @@ class ProfileScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(StitchSpacing.xl),
             child: Column(
               children: [
-                Container(
-                  width: 74,
-                  height: 74,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: moodTheme.halo,
-                    border: Border.all(color: moodTheme.accent),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'UR',
-                      style: textTheme.titleLarge?.copyWith(
-                        color: moodTheme.accent,
-                      ),
-                    ),
-                  ),
-                ),
+                _ProfileAvatar(user: user),
                 const SizedBox(height: StitchSpacing.md),
-                Text('Uplift Reel Viewer', style: textTheme.titleLarge),
+                Text(
+                  user?.displayName ?? user?.email ?? 'Uplift Reel Viewer',
+                  style: textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: StitchSpacing.xs),
                 Text(
-                  'Your personalized movie journey.',
+                  user != null && user.displayName != null
+                      ? user.email
+                      : 'Your personalized movie journey.',
                   style: textTheme.bodyMedium,
                 ),
+                if (user == null) ...[
+                  const SizedBox(height: StitchSpacing.lg),
+                  StitchButton(
+                    label: 'Sign in',
+                    icon: Icons.login,
+                    variant: StitchButtonVariant.mood,
+                    onPressed: () => showAuthSheet(context),
+                  ),
+                ],
                 const SizedBox(height: StitchSpacing.lg),
                 Row(
                   children: [
@@ -113,6 +118,23 @@ class ProfileScreen extends ConsumerWidget {
             label: 'App settings',
             onTap: () => context.push('/settings'),
           ),
+          if (user != null)
+            _ActionTile(
+              icon: Icons.logout,
+              label: 'Sign out',
+              color: colors.danger,
+              onTap: () async {
+                final ok = await ref
+                    .read(authControllerProvider.notifier)
+                    .signOut();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(ok ? 'Signed out' : 'Sign out failed'),
+                  ),
+                );
+              },
+            ),
           const SizedBox(height: StitchSpacing.sm),
           Center(
             child: Text(
@@ -156,16 +178,62 @@ class _Stat extends StatelessWidget {
   }
 }
 
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.user});
+
+  final AuthUser? user;
+
+  @override
+  Widget build(BuildContext context) {
+    final moodTheme = StitchMoodTheme.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    final avatarUrl = user?.avatarUrl;
+    final initials = switch (user) {
+      AuthUser(:final displayName?) when displayName.isNotEmpty =>
+        displayName.trim()[0].toUpperCase(),
+      AuthUser(:final email) when email.isNotEmpty => email[0].toUpperCase(),
+      _ => 'UR',
+    };
+
+    return Container(
+      width: 74,
+      height: 74,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: moodTheme.halo,
+        border: Border.all(color: moodTheme.accent),
+        image: avatarUrl != null
+            ? DecorationImage(
+                image: CachedNetworkImageProvider(avatarUrl),
+                fit: BoxFit.cover,
+              )
+            : null,
+      ),
+      child: avatarUrl == null
+          ? Center(
+              child: Text(
+                initials,
+                style: textTheme.titleLarge?.copyWith(color: moodTheme.accent),
+              ),
+            )
+          : null,
+    );
+  }
+}
+
 class _ActionTile extends StatelessWidget {
   const _ActionTile({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.color,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -184,9 +252,14 @@ class _ActionTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: colors.smoke),
+              Icon(icon, size: 20, color: color ?? colors.smoke),
               const SizedBox(width: StitchSpacing.md),
-              Text(label, style: Theme.of(context).textTheme.bodyLarge),
+              Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: color),
+              ),
               const Spacer(),
               Icon(Icons.chevron_right, size: 20, color: colors.smoke),
             ],

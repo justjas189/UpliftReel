@@ -16,7 +16,12 @@ T _$identity<T>(T value) => value;
 mixin _$Movie {
 
  String get id; String get title; List<Genre> get genres; double get imdbRating; int get releaseYear;/// Minutes.
- int get runtime; String get synopsis; String get director; List<String> get actors; List<MoodTag> get moodTags; String? get trailerUrl; String? get posterUrl; String? get backdropUrl;
+ int get runtime; String get synopsis; String get director; List<String> get actors; List<MoodTag> get moodTags;/// Production-crew enrichment, sourced from TMDB `credits` (writers/
+/// producers) and the TMDB details `tagline`. Optional/defaulted so cached
+/// movies persisted before this field existed still deserialize.
+ List<String> get writers; List<String> get producers; String? get tagline;/// OMDb `Awards` blurb for the selected pick ("Won 2 Oscars. 5 wins &
+/// 12 nominations."). Null when OMDb has none or wasn't queried.
+ String? get awards; String? get trailerUrl; String? get posterUrl; String? get backdropUrl;
 /// Create a copy of Movie
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +34,16 @@ $MovieCopyWith<Movie> get copyWith => _$MovieCopyWithImpl<Movie>(this as Movie, 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Movie&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&const DeepCollectionEquality().equals(other.genres, genres)&&(identical(other.imdbRating, imdbRating) || other.imdbRating == imdbRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear)&&(identical(other.runtime, runtime) || other.runtime == runtime)&&(identical(other.synopsis, synopsis) || other.synopsis == synopsis)&&(identical(other.director, director) || other.director == director)&&const DeepCollectionEquality().equals(other.actors, actors)&&const DeepCollectionEquality().equals(other.moodTags, moodTags)&&(identical(other.trailerUrl, trailerUrl) || other.trailerUrl == trailerUrl)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.backdropUrl, backdropUrl) || other.backdropUrl == backdropUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Movie&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&const DeepCollectionEquality().equals(other.genres, genres)&&(identical(other.imdbRating, imdbRating) || other.imdbRating == imdbRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear)&&(identical(other.runtime, runtime) || other.runtime == runtime)&&(identical(other.synopsis, synopsis) || other.synopsis == synopsis)&&(identical(other.director, director) || other.director == director)&&const DeepCollectionEquality().equals(other.actors, actors)&&const DeepCollectionEquality().equals(other.moodTags, moodTags)&&const DeepCollectionEquality().equals(other.writers, writers)&&const DeepCollectionEquality().equals(other.producers, producers)&&(identical(other.tagline, tagline) || other.tagline == tagline)&&(identical(other.awards, awards) || other.awards == awards)&&(identical(other.trailerUrl, trailerUrl) || other.trailerUrl == trailerUrl)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.backdropUrl, backdropUrl) || other.backdropUrl == backdropUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,const DeepCollectionEquality().hash(genres),imdbRating,releaseYear,runtime,synopsis,director,const DeepCollectionEquality().hash(actors),const DeepCollectionEquality().hash(moodTags),trailerUrl,posterUrl,backdropUrl);
+int get hashCode => Object.hash(runtimeType,id,title,const DeepCollectionEquality().hash(genres),imdbRating,releaseYear,runtime,synopsis,director,const DeepCollectionEquality().hash(actors),const DeepCollectionEquality().hash(moodTags),const DeepCollectionEquality().hash(writers),const DeepCollectionEquality().hash(producers),tagline,awards,trailerUrl,posterUrl,backdropUrl);
 
 @override
 String toString() {
-  return 'Movie(id: $id, title: $title, genres: $genres, imdbRating: $imdbRating, releaseYear: $releaseYear, runtime: $runtime, synopsis: $synopsis, director: $director, actors: $actors, moodTags: $moodTags, trailerUrl: $trailerUrl, posterUrl: $posterUrl, backdropUrl: $backdropUrl)';
+  return 'Movie(id: $id, title: $title, genres: $genres, imdbRating: $imdbRating, releaseYear: $releaseYear, runtime: $runtime, synopsis: $synopsis, director: $director, actors: $actors, moodTags: $moodTags, writers: $writers, producers: $producers, tagline: $tagline, awards: $awards, trailerUrl: $trailerUrl, posterUrl: $posterUrl, backdropUrl: $backdropUrl)';
 }
 
 
@@ -49,7 +54,7 @@ abstract mixin class $MovieCopyWith<$Res>  {
   factory $MovieCopyWith(Movie value, $Res Function(Movie) _then) = _$MovieCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, List<Genre> genres, double imdbRating, int releaseYear, int runtime, String synopsis, String director, List<String> actors, List<MoodTag> moodTags, String? trailerUrl, String? posterUrl, String? backdropUrl
+ String id, String title, List<Genre> genres, double imdbRating, int releaseYear, int runtime, String synopsis, String director, List<String> actors, List<MoodTag> moodTags, List<String> writers, List<String> producers, String? tagline, String? awards, String? trailerUrl, String? posterUrl, String? backdropUrl
 });
 
 
@@ -66,7 +71,7 @@ class _$MovieCopyWithImpl<$Res>
 
 /// Create a copy of Movie
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? genres = null,Object? imdbRating = null,Object? releaseYear = null,Object? runtime = null,Object? synopsis = null,Object? director = null,Object? actors = null,Object? moodTags = null,Object? trailerUrl = freezed,Object? posterUrl = freezed,Object? backdropUrl = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? genres = null,Object? imdbRating = null,Object? releaseYear = null,Object? runtime = null,Object? synopsis = null,Object? director = null,Object? actors = null,Object? moodTags = null,Object? writers = null,Object? producers = null,Object? tagline = freezed,Object? awards = freezed,Object? trailerUrl = freezed,Object? posterUrl = freezed,Object? backdropUrl = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -78,7 +83,11 @@ as int,synopsis: null == synopsis ? _self.synopsis : synopsis // ignore: cast_nu
 as String,director: null == director ? _self.director : director // ignore: cast_nullable_to_non_nullable
 as String,actors: null == actors ? _self.actors : actors // ignore: cast_nullable_to_non_nullable
 as List<String>,moodTags: null == moodTags ? _self.moodTags : moodTags // ignore: cast_nullable_to_non_nullable
-as List<MoodTag>,trailerUrl: freezed == trailerUrl ? _self.trailerUrl : trailerUrl // ignore: cast_nullable_to_non_nullable
+as List<MoodTag>,writers: null == writers ? _self.writers : writers // ignore: cast_nullable_to_non_nullable
+as List<String>,producers: null == producers ? _self.producers : producers // ignore: cast_nullable_to_non_nullable
+as List<String>,tagline: freezed == tagline ? _self.tagline : tagline // ignore: cast_nullable_to_non_nullable
+as String?,awards: freezed == awards ? _self.awards : awards // ignore: cast_nullable_to_non_nullable
+as String?,trailerUrl: freezed == trailerUrl ? _self.trailerUrl : trailerUrl // ignore: cast_nullable_to_non_nullable
 as String?,posterUrl: freezed == posterUrl ? _self.posterUrl : posterUrl // ignore: cast_nullable_to_non_nullable
 as String?,backdropUrl: freezed == backdropUrl ? _self.backdropUrl : backdropUrl // ignore: cast_nullable_to_non_nullable
 as String?,
@@ -166,10 +175,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  List<Genre> genres,  double imdbRating,  int releaseYear,  int runtime,  String synopsis,  String director,  List<String> actors,  List<MoodTag> moodTags,  String? trailerUrl,  String? posterUrl,  String? backdropUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  List<Genre> genres,  double imdbRating,  int releaseYear,  int runtime,  String synopsis,  String director,  List<String> actors,  List<MoodTag> moodTags,  List<String> writers,  List<String> producers,  String? tagline,  String? awards,  String? trailerUrl,  String? posterUrl,  String? backdropUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Movie() when $default != null:
-return $default(_that.id,_that.title,_that.genres,_that.imdbRating,_that.releaseYear,_that.runtime,_that.synopsis,_that.director,_that.actors,_that.moodTags,_that.trailerUrl,_that.posterUrl,_that.backdropUrl);case _:
+return $default(_that.id,_that.title,_that.genres,_that.imdbRating,_that.releaseYear,_that.runtime,_that.synopsis,_that.director,_that.actors,_that.moodTags,_that.writers,_that.producers,_that.tagline,_that.awards,_that.trailerUrl,_that.posterUrl,_that.backdropUrl);case _:
   return orElse();
 
 }
@@ -187,10 +196,10 @@ return $default(_that.id,_that.title,_that.genres,_that.imdbRating,_that.release
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  List<Genre> genres,  double imdbRating,  int releaseYear,  int runtime,  String synopsis,  String director,  List<String> actors,  List<MoodTag> moodTags,  String? trailerUrl,  String? posterUrl,  String? backdropUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  List<Genre> genres,  double imdbRating,  int releaseYear,  int runtime,  String synopsis,  String director,  List<String> actors,  List<MoodTag> moodTags,  List<String> writers,  List<String> producers,  String? tagline,  String? awards,  String? trailerUrl,  String? posterUrl,  String? backdropUrl)  $default,) {final _that = this;
 switch (_that) {
 case _Movie():
-return $default(_that.id,_that.title,_that.genres,_that.imdbRating,_that.releaseYear,_that.runtime,_that.synopsis,_that.director,_that.actors,_that.moodTags,_that.trailerUrl,_that.posterUrl,_that.backdropUrl);case _:
+return $default(_that.id,_that.title,_that.genres,_that.imdbRating,_that.releaseYear,_that.runtime,_that.synopsis,_that.director,_that.actors,_that.moodTags,_that.writers,_that.producers,_that.tagline,_that.awards,_that.trailerUrl,_that.posterUrl,_that.backdropUrl);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -207,10 +216,10 @@ return $default(_that.id,_that.title,_that.genres,_that.imdbRating,_that.release
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  List<Genre> genres,  double imdbRating,  int releaseYear,  int runtime,  String synopsis,  String director,  List<String> actors,  List<MoodTag> moodTags,  String? trailerUrl,  String? posterUrl,  String? backdropUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  List<Genre> genres,  double imdbRating,  int releaseYear,  int runtime,  String synopsis,  String director,  List<String> actors,  List<MoodTag> moodTags,  List<String> writers,  List<String> producers,  String? tagline,  String? awards,  String? trailerUrl,  String? posterUrl,  String? backdropUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _Movie() when $default != null:
-return $default(_that.id,_that.title,_that.genres,_that.imdbRating,_that.releaseYear,_that.runtime,_that.synopsis,_that.director,_that.actors,_that.moodTags,_that.trailerUrl,_that.posterUrl,_that.backdropUrl);case _:
+return $default(_that.id,_that.title,_that.genres,_that.imdbRating,_that.releaseYear,_that.runtime,_that.synopsis,_that.director,_that.actors,_that.moodTags,_that.writers,_that.producers,_that.tagline,_that.awards,_that.trailerUrl,_that.posterUrl,_that.backdropUrl);case _:
   return null;
 
 }
@@ -222,7 +231,7 @@ return $default(_that.id,_that.title,_that.genres,_that.imdbRating,_that.release
 @JsonSerializable()
 
 class _Movie implements Movie {
-  const _Movie({required this.id, required this.title, required final  List<Genre> genres, required this.imdbRating, required this.releaseYear, required this.runtime, required this.synopsis, required this.director, required final  List<String> actors, required final  List<MoodTag> moodTags, this.trailerUrl, this.posterUrl, this.backdropUrl}): _genres = genres,_actors = actors,_moodTags = moodTags;
+  const _Movie({required this.id, required this.title, required final  List<Genre> genres, required this.imdbRating, required this.releaseYear, required this.runtime, required this.synopsis, required this.director, required final  List<String> actors, required final  List<MoodTag> moodTags, final  List<String> writers = const <String>[], final  List<String> producers = const <String>[], this.tagline, this.awards, this.trailerUrl, this.posterUrl, this.backdropUrl}): _genres = genres,_actors = actors,_moodTags = moodTags,_writers = writers,_producers = producers;
   factory _Movie.fromJson(Map<String, dynamic> json) => _$MovieFromJson(json);
 
 @override final  String id;
@@ -254,6 +263,30 @@ class _Movie implements Movie {
   return EqualUnmodifiableListView(_moodTags);
 }
 
+/// Production-crew enrichment, sourced from TMDB `credits` (writers/
+/// producers) and the TMDB details `tagline`. Optional/defaulted so cached
+/// movies persisted before this field existed still deserialize.
+ final  List<String> _writers;
+/// Production-crew enrichment, sourced from TMDB `credits` (writers/
+/// producers) and the TMDB details `tagline`. Optional/defaulted so cached
+/// movies persisted before this field existed still deserialize.
+@override@JsonKey() List<String> get writers {
+  if (_writers is EqualUnmodifiableListView) return _writers;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_writers);
+}
+
+ final  List<String> _producers;
+@override@JsonKey() List<String> get producers {
+  if (_producers is EqualUnmodifiableListView) return _producers;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_producers);
+}
+
+@override final  String? tagline;
+/// OMDb `Awards` blurb for the selected pick ("Won 2 Oscars. 5 wins &
+/// 12 nominations."). Null when OMDb has none or wasn't queried.
+@override final  String? awards;
 @override final  String? trailerUrl;
 @override final  String? posterUrl;
 @override final  String? backdropUrl;
@@ -271,16 +304,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Movie&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&const DeepCollectionEquality().equals(other._genres, _genres)&&(identical(other.imdbRating, imdbRating) || other.imdbRating == imdbRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear)&&(identical(other.runtime, runtime) || other.runtime == runtime)&&(identical(other.synopsis, synopsis) || other.synopsis == synopsis)&&(identical(other.director, director) || other.director == director)&&const DeepCollectionEquality().equals(other._actors, _actors)&&const DeepCollectionEquality().equals(other._moodTags, _moodTags)&&(identical(other.trailerUrl, trailerUrl) || other.trailerUrl == trailerUrl)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.backdropUrl, backdropUrl) || other.backdropUrl == backdropUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Movie&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&const DeepCollectionEquality().equals(other._genres, _genres)&&(identical(other.imdbRating, imdbRating) || other.imdbRating == imdbRating)&&(identical(other.releaseYear, releaseYear) || other.releaseYear == releaseYear)&&(identical(other.runtime, runtime) || other.runtime == runtime)&&(identical(other.synopsis, synopsis) || other.synopsis == synopsis)&&(identical(other.director, director) || other.director == director)&&const DeepCollectionEquality().equals(other._actors, _actors)&&const DeepCollectionEquality().equals(other._moodTags, _moodTags)&&const DeepCollectionEquality().equals(other._writers, _writers)&&const DeepCollectionEquality().equals(other._producers, _producers)&&(identical(other.tagline, tagline) || other.tagline == tagline)&&(identical(other.awards, awards) || other.awards == awards)&&(identical(other.trailerUrl, trailerUrl) || other.trailerUrl == trailerUrl)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.backdropUrl, backdropUrl) || other.backdropUrl == backdropUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,const DeepCollectionEquality().hash(_genres),imdbRating,releaseYear,runtime,synopsis,director,const DeepCollectionEquality().hash(_actors),const DeepCollectionEquality().hash(_moodTags),trailerUrl,posterUrl,backdropUrl);
+int get hashCode => Object.hash(runtimeType,id,title,const DeepCollectionEquality().hash(_genres),imdbRating,releaseYear,runtime,synopsis,director,const DeepCollectionEquality().hash(_actors),const DeepCollectionEquality().hash(_moodTags),const DeepCollectionEquality().hash(_writers),const DeepCollectionEquality().hash(_producers),tagline,awards,trailerUrl,posterUrl,backdropUrl);
 
 @override
 String toString() {
-  return 'Movie(id: $id, title: $title, genres: $genres, imdbRating: $imdbRating, releaseYear: $releaseYear, runtime: $runtime, synopsis: $synopsis, director: $director, actors: $actors, moodTags: $moodTags, trailerUrl: $trailerUrl, posterUrl: $posterUrl, backdropUrl: $backdropUrl)';
+  return 'Movie(id: $id, title: $title, genres: $genres, imdbRating: $imdbRating, releaseYear: $releaseYear, runtime: $runtime, synopsis: $synopsis, director: $director, actors: $actors, moodTags: $moodTags, writers: $writers, producers: $producers, tagline: $tagline, awards: $awards, trailerUrl: $trailerUrl, posterUrl: $posterUrl, backdropUrl: $backdropUrl)';
 }
 
 
@@ -291,7 +324,7 @@ abstract mixin class _$MovieCopyWith<$Res> implements $MovieCopyWith<$Res> {
   factory _$MovieCopyWith(_Movie value, $Res Function(_Movie) _then) = __$MovieCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, List<Genre> genres, double imdbRating, int releaseYear, int runtime, String synopsis, String director, List<String> actors, List<MoodTag> moodTags, String? trailerUrl, String? posterUrl, String? backdropUrl
+ String id, String title, List<Genre> genres, double imdbRating, int releaseYear, int runtime, String synopsis, String director, List<String> actors, List<MoodTag> moodTags, List<String> writers, List<String> producers, String? tagline, String? awards, String? trailerUrl, String? posterUrl, String? backdropUrl
 });
 
 
@@ -308,7 +341,7 @@ class __$MovieCopyWithImpl<$Res>
 
 /// Create a copy of Movie
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? genres = null,Object? imdbRating = null,Object? releaseYear = null,Object? runtime = null,Object? synopsis = null,Object? director = null,Object? actors = null,Object? moodTags = null,Object? trailerUrl = freezed,Object? posterUrl = freezed,Object? backdropUrl = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? genres = null,Object? imdbRating = null,Object? releaseYear = null,Object? runtime = null,Object? synopsis = null,Object? director = null,Object? actors = null,Object? moodTags = null,Object? writers = null,Object? producers = null,Object? tagline = freezed,Object? awards = freezed,Object? trailerUrl = freezed,Object? posterUrl = freezed,Object? backdropUrl = freezed,}) {
   return _then(_Movie(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -320,7 +353,11 @@ as int,synopsis: null == synopsis ? _self.synopsis : synopsis // ignore: cast_nu
 as String,director: null == director ? _self.director : director // ignore: cast_nullable_to_non_nullable
 as String,actors: null == actors ? _self._actors : actors // ignore: cast_nullable_to_non_nullable
 as List<String>,moodTags: null == moodTags ? _self._moodTags : moodTags // ignore: cast_nullable_to_non_nullable
-as List<MoodTag>,trailerUrl: freezed == trailerUrl ? _self.trailerUrl : trailerUrl // ignore: cast_nullable_to_non_nullable
+as List<MoodTag>,writers: null == writers ? _self._writers : writers // ignore: cast_nullable_to_non_nullable
+as List<String>,producers: null == producers ? _self._producers : producers // ignore: cast_nullable_to_non_nullable
+as List<String>,tagline: freezed == tagline ? _self.tagline : tagline // ignore: cast_nullable_to_non_nullable
+as String?,awards: freezed == awards ? _self.awards : awards // ignore: cast_nullable_to_non_nullable
+as String?,trailerUrl: freezed == trailerUrl ? _self.trailerUrl : trailerUrl // ignore: cast_nullable_to_non_nullable
 as String?,posterUrl: freezed == posterUrl ? _self.posterUrl : posterUrl // ignore: cast_nullable_to_non_nullable
 as String?,backdropUrl: freezed == backdropUrl ? _self.backdropUrl : backdropUrl // ignore: cast_nullable_to_non_nullable
 as String?,

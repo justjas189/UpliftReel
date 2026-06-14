@@ -10,6 +10,7 @@ import '../../../../state/watched_movies_controller.dart';
 import '../../../core/format.dart';
 import '../../../core/launch_trailer.dart';
 import '../../../core/theme/stitch_theme.dart';
+import '../../../core/widgets/share_movie_button.dart';
 import '../../../core/widgets/stitch_button.dart';
 import '../../../core/widgets/stitch_movie_card.dart';
 import '../../../core/widgets/stitch_skeleton.dart';
@@ -33,8 +34,26 @@ class MovieDetailsScreen extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
     final watched = ref.watch(watchedMoviesProvider).contains(target.id);
 
+    final tagline = target.tagline;
+    final hasCredits =
+        target.director.isNotEmpty ||
+        target.actors.isNotEmpty ||
+        target.writers.isNotEmpty ||
+        target.producers.isNotEmpty;
+    final awards = target.awards;
+
     final content = [
       Text(target.title, style: textTheme.displayMedium),
+      if (tagline != null && tagline.isNotEmpty) ...[
+        const SizedBox(height: StitchSpacing.xs),
+        Text(
+          '“$tagline”',
+          style: textTheme.bodyMedium?.copyWith(
+            color: colors.smoke,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
       const SizedBox(height: StitchSpacing.xs),
       Text(
         '${target.releaseYear} · ${formatRuntime(target.runtime)} · '
@@ -67,52 +86,46 @@ class MovieDetailsScreen extends ConsumerWidget {
             ),
         ],
       ),
-      if (result != null) ...[
-        const SizedBox(height: StitchSpacing.lg),
-        StitchMovieCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${result!.matchScore.round()}% MATCH',
-                style: StitchTypography.data(
-                  color: moodTheme.accent,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: StitchSpacing.sm),
-              Text(result!.explanation, style: textTheme.bodyLarge),
-              if (result!.alternativeReason != null) ...[
-                const SizedBox(height: StitchSpacing.sm),
-                Text(
-                  result!.alternativeReason!,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: moodTheme.accent,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
       if (target.synopsis.isNotEmpty) ...[
         const SizedBox(height: StitchSpacing.lg),
         Text('SYNOPSIS', style: textTheme.labelSmall),
         const SizedBox(height: StitchSpacing.sm),
         Text(target.synopsis, style: textTheme.bodyLarge),
       ],
-      if (target.director.isNotEmpty || target.actors.isNotEmpty) ...[
+      if (hasCredits) ...[
         const SizedBox(height: StitchSpacing.lg),
-        Text('CREDITS', style: textTheme.labelSmall),
+        Text('CAST & CREW', style: textTheme.labelSmall),
         const SizedBox(height: StitchSpacing.sm),
         if (target.director.isNotEmpty)
-          Text('Director: ${target.director}', style: textTheme.bodyMedium),
+          _CreditLine(label: 'Director', value: target.director),
         if (target.actors.isNotEmpty)
-          Text(
-            'Cast: ${target.actors.join(', ')}',
-            style: textTheme.bodyMedium,
+          _CreditLine(label: 'Starring', value: target.actors.join(', ')),
+        if (target.writers.isNotEmpty)
+          _CreditLine(label: 'Writers', value: target.writers.join(', ')),
+        if (target.producers.isNotEmpty)
+          _CreditLine(label: 'Producers', value: target.producers.join(', ')),
+      ],
+      if (awards != null) ...[
+        const SizedBox(height: StitchSpacing.lg),
+        Text('AWARDS', style: textTheme.labelSmall),
+        const SizedBox(height: StitchSpacing.sm),
+        StitchMovieCard(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.emoji_events_outlined, color: moodTheme.accent),
+              const SizedBox(width: StitchSpacing.md),
+              Expanded(
+                child: Text(
+                  awards,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colors.parchment,
+                  ),
+                ),
+              ),
+            ],
           ),
+        ),
       ],
       const SizedBox(height: StitchSpacing.xl),
       StitchButton(
@@ -139,6 +152,12 @@ class MovieDetailsScreen extends ConsumerWidget {
                   ),
                 );
               },
+      ),
+      const SizedBox(height: StitchSpacing.sm),
+      ShareMovieButton(
+        movie: target,
+        variant: StitchButtonVariant.outline,
+        expand: true,
       ),
     ];
 
@@ -180,6 +199,44 @@ class MovieDetailsScreen extends ConsumerWidget {
                       curve: StitchMotion.easeOut,
                     ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One labelled line of the CAST & CREW block: a fixed-width role caption
+/// beside the comma-joined names, so Director/Starring/Writers/Producers align.
+class _CreditLine extends StatelessWidget {
+  const _CreditLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StitchColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: StitchSpacing.xxs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 84,
+            child: Text(
+              label.toUpperCase(),
+              style: textTheme.labelSmall?.copyWith(color: colors.smoke),
+            ),
+          ),
+          const SizedBox(width: StitchSpacing.sm),
+          Expanded(
+            child: Text(
+              value,
+              style: textTheme.bodyMedium?.copyWith(color: colors.parchment),
             ),
           ),
         ],

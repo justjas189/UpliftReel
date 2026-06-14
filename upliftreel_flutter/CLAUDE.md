@@ -10,7 +10,7 @@ UpliftReel: mood-based daily movie recommendation app. Flutter port of the legac
 
 - Test: `flutter test` · Analyze: `flutter analyze`
 - Codegen (after touching freezed/json models): `dart run build_runner build --delete-conflicting-outputs`
-- Run with API keys: `flutter run --dart-define-from-file=dart-defines.json` (gitignored file with `TMDB_ACCESS_TOKEN` and `OMDB_API_KEY`; read via `String.fromEnvironment` in `lib/data/services/api_config.dart`)
+- Run with API keys: `flutter run --dart-define-from-file=dart-defines.json` (gitignored file with `TMDB_ACCESS_TOKEN`, `OMDB_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`; read via `String.fromEnvironment` in `lib/data/services/api_config.dart`). Supabase keys are optional — with them blank the app runs local-only and auth is disabled (`ApiConfig.supabaseConfigured` gates `Supabase.initialize` in `main.dart`).
 
 ## Architecture
 
@@ -18,6 +18,7 @@ Layered: `lib/data` (services wrap TMDB/OMDb APIs, repositories return domain mo
 
 - UI never imports `lib/data` directly — go through `lib/state` providers; shared types live in `lib/domain/models`.
 - Infrastructure providers (Hive boxes, SharedPreferences) throw `UnimplementedError` unless overridden in `ProviderScope` at boot (`main.dart`); tests must override them.
+- Auth: `SupabaseAuthService` (raw GoTrue) → `AuthRepository` (maps to `AuthUser`, wraps `AuthException` as domain `AuthFailure`) → `AuthController` (`AsyncNotifier<AuthUser?>`: `AsyncData(null)` = signed out). OAuth deep link `com.upliftreel.upliftreel://login-callback` is registered in both `AndroidManifest.xml` and iOS `Info.plist` and must be in the Supabase dashboard redirect allow-list. Login UI is a bottom sheet (`ui/features/auth/views/auth_sheet.dart`). Tests inject `test/state/fake_auth_repository.dart` via `authRepositoryProvider`.
 
 ## Testing gotchas
 

@@ -21,6 +21,14 @@ _Movie _$MovieFromJson(Map<String, dynamic> json) => _Movie(
   moodTags: (json['moodTags'] as List<dynamic>)
       .map((e) => $enumDecode(_$MoodTagEnumMap, e))
       .toList(),
+  writers:
+      (json['writers'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const <String>[],
+  producers:
+      (json['producers'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const <String>[],
+  tagline: json['tagline'] as String?,
+  awards: json['awards'] as String?,
   trailerUrl: json['trailerUrl'] as String?,
   posterUrl: json['posterUrl'] as String?,
   backdropUrl: json['backdropUrl'] as String?,
@@ -37,6 +45,10 @@ Map<String, dynamic> _$MovieToJson(_Movie instance) => <String, dynamic>{
   'director': instance.director,
   'actors': instance.actors,
   'moodTags': instance.moodTags.map((e) => _$MoodTagEnumMap[e]!).toList(),
+  'writers': instance.writers,
+  'producers': instance.producers,
+  'tagline': instance.tagline,
+  'awards': instance.awards,
   'trailerUrl': instance.trailerUrl,
   'posterUrl': instance.posterUrl,
   'backdropUrl': instance.backdropUrl,

@@ -75,7 +75,7 @@ void main() {
 
       final details = await tmdbWith(adapter).fetchDetails(27205);
 
-      expect(seen.uri.queryParameters['append_to_response'], 'videos');
+      expect(seen.uri.queryParameters['append_to_response'], 'videos,credits');
       expect(details.runtime, 148);
       expect(details.trailerUrl, 'https://www.youtube.com/watch?v=real1');
     });
@@ -96,6 +96,38 @@ void main() {
         final empty = await tmdbWith(none).fetchDetails(1);
         expect(empty.runtime, 90);
         expect(empty.trailerUrl, isNull);
+      },
+    );
+
+    test(
+      'fetchDetails parses tagline, director, cast, writers, producers',
+      () async {
+        final adapter = FakeHttpAdapter(
+          (_) => jsonResponse(
+            '{"runtime": 120, "tagline": "One pick, every day.",'
+            '"credits": {'
+            '"cast": ['
+            '{"name": "Lead One"}, {"name": "Lead Two"}, {"name": "Lead Three"}'
+            '],'
+            '"crew": ['
+            '{"job": "Director", "name": "Jane Helm"},'
+            '{"job": "Screenplay", "name": "Writer A"},'
+            '{"job": "Story", "name": "Writer A"},'
+            '{"job": "Writer", "name": "Writer B"},'
+            '{"job": "Producer", "name": "Prod One"},'
+            '{"job": "Director of Photography", "name": "DOP X"}'
+            ']}}',
+          ),
+        );
+
+        final details = await tmdbWith(adapter).fetchDetails(1);
+
+        expect(details.tagline, 'One pick, every day.');
+        expect(details.director, 'Jane Helm');
+        expect(details.cast, ['Lead One', 'Lead Two', 'Lead Three']);
+        // Dedupes the repeated writer; DOP is not a writer/producer role.
+        expect(details.writers, ['Writer A', 'Writer B']);
+        expect(details.producers, ['Prod One']);
       },
     );
 

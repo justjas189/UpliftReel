@@ -40,8 +40,10 @@ void main() {
   setUp(() async {
     tempDir = Directory.systemTemp.createTempSync('home_test');
     Hive.init(tempDir.path);
-    movieCacheBox =
-        await Hive.openBox<String>('movie_cache', bytes: Uint8List(0));
+    movieCacheBox = await Hive.openBox<String>(
+      'movie_cache',
+      bytes: Uint8List(0),
+    );
     historyBox = await Hive.openBox<String>('history', bytes: Uint8List(0));
     moodBox = await Hive.openBox<String>('mood_log', bytes: Uint8List(0));
     SharedPreferences.setMockInitialValues({});
@@ -74,14 +76,15 @@ void main() {
         movieCacheBoxProvider.overrideWithValue(movieCacheBox),
         historyBoxProvider.overrideWithValue(historyBox),
         moodBoxProvider.overrideWithValue(moodBox),
-        tmdbApiProvider.overrideWithValue(TmdbApi(
-          dio: Dio()..httpClientAdapter = tmdbAdapter,
-          accessToken: 'token',
-        )),
-        omdbApiProvider.overrideWithValue(OmdbApi(
-          dio: Dio()..httpClientAdapter = omdbAdapter,
-          apiKey: 'key',
-        )),
+        tmdbApiProvider.overrideWithValue(
+          TmdbApi(
+            dio: Dio()..httpClientAdapter = tmdbAdapter,
+            accessToken: 'token',
+          ),
+        ),
+        omdbApiProvider.overrideWithValue(
+          OmdbApi(dio: Dio()..httpClientAdapter = omdbAdapter, apiKey: 'key'),
+        ),
       ],
       child: const UpliftReelApp(),
     );
@@ -100,15 +103,17 @@ void main() {
     expect(find.text('Need a lift?'), findsOneWidget);
     expect(
       find.text(
-          'Tap below to generate your first personalized recommendation.'),
+        'Tap below to generate your first personalized recommendation.',
+      ),
       findsOneWidget,
     );
     expect(find.text('Generate recommendation'), findsOneWidget);
     expect(find.text('Set a mood for sharper picks →'), findsOneWidget);
   });
 
-  testWidgets('generate renders hero, match badge, and explanation card',
-      (tester) async {
+  testWidgets('generate renders hero, match badge, and explanation card', (
+    tester,
+  ) async {
     await tester.pumpWidget(makeApp());
     await settle(tester);
 
@@ -138,6 +143,9 @@ void main() {
     await settle(tester);
 
     expect(find.text('Saved to history'), findsOneWidget);
+    // Button flips to its confirmed state.
+    expect(find.text('Watched ✓'), findsOneWidget);
+    expect(find.text('Watched it'), findsNothing);
   });
 
   testWidgets('failed generate shows error card with retry', (tester) async {

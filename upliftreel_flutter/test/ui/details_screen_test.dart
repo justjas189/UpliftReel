@@ -40,8 +40,10 @@ void main() {
   setUp(() async {
     tempDir = Directory.systemTemp.createTempSync('details_test');
     Hive.init(tempDir.path);
-    movieCacheBox =
-        await Hive.openBox<String>('movie_cache', bytes: Uint8List(0));
+    movieCacheBox = await Hive.openBox<String>(
+      'movie_cache',
+      bytes: Uint8List(0),
+    );
     historyBox = await Hive.openBox<String>('history', bytes: Uint8List(0));
     moodBox = await Hive.openBox<String>('mood_log', bytes: Uint8List(0));
     SharedPreferences.setMockInitialValues({});
@@ -73,14 +75,15 @@ void main() {
         movieCacheBoxProvider.overrideWithValue(movieCacheBox),
         historyBoxProvider.overrideWithValue(historyBox),
         moodBoxProvider.overrideWithValue(moodBox),
-        tmdbApiProvider.overrideWithValue(TmdbApi(
-          dio: Dio()..httpClientAdapter = tmdbAdapter,
-          accessToken: 'token',
-        )),
-        omdbApiProvider.overrideWithValue(OmdbApi(
-          dio: Dio()..httpClientAdapter = omdbAdapter,
-          apiKey: 'key',
-        )),
+        tmdbApiProvider.overrideWithValue(
+          TmdbApi(
+            dio: Dio()..httpClientAdapter = tmdbAdapter,
+            accessToken: 'token',
+          ),
+        ),
+        omdbApiProvider.overrideWithValue(
+          OmdbApi(dio: Dio()..httpClientAdapter = omdbAdapter, apiKey: 'key'),
+        ),
       ],
       child: const UpliftReelApp(),
     );
@@ -103,8 +106,7 @@ void main() {
     await settle(tester);
   }
 
-  testWidgets('shows title, match card, synopsis, and all genres',
-      (tester) async {
+  testWidgets('shows title, synopsis, genres; no match card', (tester) async {
     await openDetailsFromPick(tester);
 
     expect(find.text('Mark as watched'), findsOneWidget);
@@ -112,12 +114,15 @@ void main() {
     expect(find.text('A gentle film.'), findsWidgets);
     expect(find.text('Comedy'), findsWidgets);
     expect(find.text('Drama'), findsWidgets);
+    // The "why this pick / match %" card was removed from Details.
+    expect(find.textContaining('% MATCH'), findsNothing);
     // No credits in the TMDB pool — section hidden, not empty.
-    expect(find.text('CREDITS'), findsNothing);
+    expect(find.text('CAST & CREW'), findsNothing);
   });
 
-  testWidgets('mark as watched persists across leave and return',
-      (tester) async {
+  testWidgets('mark as watched persists across leave and return', (
+    tester,
+  ) async {
     await openDetailsFromPick(tester);
 
     await tester.ensureVisible(find.text('Mark as watched'));
@@ -140,8 +145,9 @@ void main() {
     expect(find.text('Mark as watched'), findsNothing);
   });
 
-  testWidgets('direct navigation without extra shows not-found guard',
-      (tester) async {
+  testWidgets('direct navigation without extra shows not-found guard', (
+    tester,
+  ) async {
     await tester.pumpWidget(makeApp());
     await settle(tester);
 

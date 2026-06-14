@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:hive/hive.dart';
 
+import '../../domain/models/era_filter.dart';
 import '../../domain/models/movie.dart';
 import '../services/omdb_api.dart';
 import '../services/tmdb_api.dart';
@@ -47,14 +48,20 @@ class MovieRepository {
 
   /// Today's recommendation pool: TMDB popular page mapped to domain movies,
   /// runtimes and trailers filled from the details endpoint, cached in hive
-  /// for the day. [language] is an ISO-639-1 original-language filter; it is
-  /// part of the cache key so switching languages refreshes the pool.
+  /// for the day. [language] is an ISO-639-1 original-language filter; [era] is
+  /// the transient Era Selector window. Both are part of the cache key so
+  /// switching language or era refreshes the pool rather than serving a stale
+  /// one.
   Future<List<Movie>> getDailyCandidates({
     DateTime? now,
     String language = 'en',
+    EraFilter? era,
   }) async {
+    final eraKey = (era == null || era.isAll)
+        ? 'all'
+        : '${era.minYear ?? ''}-${era.maxYear ?? ''}';
     final cacheKey =
-        'candidates_${language}_${_dateKey(now ?? DateTime.now())}';
+        'candidates_${language}_${eraKey}_${_dateKey(now ?? DateTime.now())}';
 
     final cached = _cacheBox.get(cacheKey);
     if (cached != null) {
@@ -65,7 +72,11 @@ class MovieRepository {
           .toList();
     }
 
-    final dtos = await _tmdbApi.fetchPopular(originalLanguage: language);
+    final dtos = await _tmdbApi.fetchPopular(
+      originalLanguage: language,
+      minYear: era?.minYear,
+      maxYear: era?.maxYear,
+    );
     final movies = <Movie>[];
 
     for (final dto in dtos) {
@@ -79,10 +90,20 @@ class MovieRepository {
 
       int? runtime;
       String? trailerUrl;
+      String? tagline;
+      var director = '';
+      var actors = const <String>[];
+      var writers = const <String>[];
+      var producers = const <String>[];
       try {
         final details = await _tmdbApi.fetchDetails(dto.id);
         runtime = details.runtime;
         trailerUrl = details.trailerUrl;
+        tagline = details.tagline;
+        director = details.director;
+        actors = details.cast;
+        writers = details.writers;
+        producers = details.producers;
       } on TmdbApiException {
         runtime = null; // Candidate is still usable with the default.
       }
@@ -99,8 +120,11 @@ class MovieRepository {
           releaseYear: _releaseYear(dto.releaseDate),
           runtime: runtime ?? _defaultRuntime,
           synopsis: dto.overview,
-          director: '',
-          actors: const [],
+          director: director,
+          actors: actors,
+          writers: writers,
+          producers: producers,
+          tagline: tagline,
           moodTags: {
             for (final genre in genres) ..._genreMoodTags[genre]!,
           }.toList(),
@@ -119,14 +143,18 @@ class MovieRepository {
   }
 
   /// OMDb bridge for the selected pick only (keeps API usage low, as legacy
-  /// did). Returns the movie unchanged when OMDb has no rating.
+  /// did): swaps in the real IMDb rating and folds in the awards blurb.
+  /// Returns the movie unchanged when OMDb has nothing or errors.
   Future<Movie> enrichWithImdbRating(Movie movie) async {
     try {
-      final rating = await _omdbApi.fetchImdbRating(
+      final omdb = await _omdbApi.fetchEnrichment(
         movie.title,
         year: movie.releaseYear > 0 ? movie.releaseYear : null,
       );
-      return rating == null ? movie : movie.copyWith(imdbRating: rating);
+      return movie.copyWith(
+        imdbRating: omdb.imdbRating ?? movie.imdbRating,
+        awards: omdb.awards ?? movie.awards,
+      );
     } on OmdbApiException {
       return movie;
     }

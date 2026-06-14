@@ -17,6 +17,7 @@ import 'package:upliftreel/state/providers.dart';
 import 'package:upliftreel/state/recommendation_controller.dart';
 
 import '../data/fake_http_adapter.dart';
+import '../state/fake_auth_repository.dart';
 
 const _popularJson = '''
 {"results": [
@@ -42,8 +43,10 @@ void main() {
   setUp(() async {
     tempDir = Directory.systemTemp.createTempSync('history_test');
     Hive.init(tempDir.path);
-    movieCacheBox =
-        await Hive.openBox<String>('movie_cache', bytes: Uint8List(0));
+    movieCacheBox = await Hive.openBox<String>(
+      'movie_cache',
+      bytes: Uint8List(0),
+    );
     historyBox = await Hive.openBox<String>('history', bytes: Uint8List(0));
     moodBox = await Hive.openBox<String>('mood_log', bytes: Uint8List(0));
     SharedPreferences.setMockInitialValues({});
@@ -55,7 +58,7 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  Widget makeApp() {
+  Widget makeApp({FakeAuthRepository? authRepository}) {
     final tmdbAdapter = FakeHttpAdapter((options) {
       if (options.uri.path.endsWith('/movie/popular')) {
         return jsonResponse(_popularJson);
@@ -75,14 +78,17 @@ void main() {
         movieCacheBoxProvider.overrideWithValue(movieCacheBox),
         historyBoxProvider.overrideWithValue(historyBox),
         moodBoxProvider.overrideWithValue(moodBox),
-        tmdbApiProvider.overrideWithValue(TmdbApi(
-          dio: Dio()..httpClientAdapter = tmdbAdapter,
-          accessToken: 'token',
-        )),
-        omdbApiProvider.overrideWithValue(OmdbApi(
-          dio: Dio()..httpClientAdapter = omdbAdapter,
-          apiKey: 'key',
-        )),
+        tmdbApiProvider.overrideWithValue(
+          TmdbApi(
+            dio: Dio()..httpClientAdapter = tmdbAdapter,
+            accessToken: 'token',
+          ),
+        ),
+        omdbApiProvider.overrideWithValue(
+          OmdbApi(dio: Dio()..httpClientAdapter = omdbAdapter, apiKey: 'key'),
+        ),
+        if (authRepository != null)
+          authRepositoryProvider.overrideWithValue(authRepository),
       ],
       child: const UpliftReelApp(),
     );
@@ -126,12 +132,15 @@ void main() {
     await settle(tester);
 
     expect(find.text('Nothing here yet'), findsOneWidget);
-    expect(find.text('0 titles tracked, average match score 0'),
-        findsOneWidget);
+    expect(
+      find.text('0 titles tracked, average match score 0'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('generated pick appears with badge; watched filter follows',
-      (tester) async {
+  testWidgets('generated pick appears with badge; watched filter follows', (
+    tester,
+  ) async {
     await bootAndGenerate(tester);
 
     await tester.tap(find.byIcon(Icons.history));
@@ -163,8 +172,9 @@ void main() {
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
 
-  testWidgets('history row opens details with the snapshot movie',
-      (tester) async {
+  testWidgets('history row opens details with the snapshot movie', (
+    tester,
+  ) async {
     await bootAndGenerate(tester);
 
     await tester.tap(find.byIcon(Icons.history));
@@ -181,7 +191,9 @@ void main() {
     await bootAndGenerate(tester);
 
     final container = containerOf(tester);
-    container.read(moodControllerProvider.notifier).select(
+    container
+        .read(moodControllerProvider.notifier)
+        .select(
           const MoodInput(mood: Mood.happy, intensity: 5, seriousness: 5),
         );
     await container.read(moodControllerProvider.notifier).commit();
@@ -202,8 +214,85 @@ void main() {
     expect(find.textContaining('Happy'), findsOneWidget);
   });
 
-  testWidgets('settings clear-history wipes data after confirm',
-      (tester) async {
+  testWidgets('signed-out profile shows placeholder and opens the auth sheet', (
+    tester,
+  ) async {
+    await tester.pumpWidget(makeApp());
+    await settle(tester);
+
+    await tester.tap(find.byIcon(Icons.person_outline));
+    await settle(tester);
+
+    expect(find.text('Uplift Reel Viewer'), findsOneWidget);
+    expect(find.text('UR'), findsOneWidget);
+    expect(find.text('Sign out'), findsNothing);
+
+    await tester.tap(find.text('Sign in'));
+    await settle(tester);
+
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+  });
+
+  testWidgets('signed-in profile shows account identity and signs out', (
+    tester,
+  ) async {
+    final authRepository = FakeAuthRepository(user: kFakeAuthUser);
+    await tester.pumpWidget(makeApp(authRepository: authRepository));
+    await settle(tester);
+
+    await tester.tap(find.byIcon(Icons.person_outline));
+    await settle(tester);
+
+    expect(find.text('Jasper'), findsOneWidget);
+    expect(find.text('jasper@example.com'), findsOneWidget);
+    expect(find.text('Uplift Reel Viewer'), findsNothing);
+    expect(find.text('Sign in'), findsNothing);
+
+    await tester.ensureVisible(find.text('Sign out'));
+    await tester.pump();
+    await tester.tap(find.text('Sign out'));
+    await settle(tester);
+
+    expect(find.text('Signed out'), findsOneWidget);
+    expect(find.text('Uplift Reel Viewer'), findsOneWidget);
+    expect(find.text('Sign in'), findsOneWidget);
+  });
+
+  testWidgets('email sign-in from the auth sheet updates the profile header', (
+    tester,
+  ) async {
+    final authRepository = FakeAuthRepository();
+    await tester.pumpWidget(makeApp(authRepository: authRepository));
+    await settle(tester);
+
+    await tester.tap(find.byIcon(Icons.person_outline));
+    await settle(tester);
+    await tester.tap(find.text('Sign in'));
+    await settle(tester);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Email'),
+      'jasper@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Password'),
+      'secret1',
+    );
+    await tester.tap(find.widgetWithText(GestureDetector, 'Sign in').last);
+    await settle(tester);
+
+    // Sheet popped itself on AsyncData(user); header shows the account.
+    expect(find.text('Welcome back'), findsNothing);
+    expect(find.text('Jasper'), findsOneWidget);
+    expect(find.text('jasper@example.com'), findsOneWidget);
+  });
+
+  testWidgets('settings clear-history wipes data after confirm', (
+    tester,
+  ) async {
     await bootAndGenerate(tester);
 
     await tester.tap(find.byIcon(Icons.person_outline));

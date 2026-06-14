@@ -59,15 +59,21 @@ class TmdbApi {
   static String? backdropUrl(String? path) =>
       path == null ? null : '$_backdropBaseUrl$path';
 
-  /// English keeps the legacy /movie/popular endpoint (behavior parity);
-  /// any other preferred language goes through /discover/movie with
-  /// `with_original_language`, sorted by popularity to mirror it.
+  /// English with no era constraint keeps the legacy /movie/popular endpoint
+  /// (behavior parity). Any other preferred language — or an active Era
+  /// Selector ([minYear]/[maxYear], inclusive) — goes through /discover/movie,
+  /// sorted by popularity to mirror it, with `with_original_language` and
+  /// `primary_release_date.gte/lte` applied so the date window is filtered
+  /// server-side before the candidate pool is even built.
   Future<List<TmdbMovieDto>> fetchPopular({
     int page = 1,
     String originalLanguage = 'en',
+    int? minYear,
+    int? maxYear,
   }) async {
+    final hasEra = minYear != null || maxYear != null;
     final Map<String, dynamic> data;
-    if (originalLanguage == 'en') {
+    if (originalLanguage == 'en' && !hasEra) {
       data = await _get('/movie/popular', {
         'language': 'en-US',
         'page': '$page',
@@ -79,6 +85,8 @@ class TmdbApi {
         'sort_by': 'popularity.desc',
         'include_adult': 'false',
         'with_original_language': originalLanguage,
+        if (minYear != null) 'primary_release_date.gte': '$minYear-01-01',
+        if (maxYear != null) 'primary_release_date.lte': '$maxYear-12-31',
       });
     }
 
@@ -90,17 +98,88 @@ class TmdbApi {
         .toList();
   }
 
-  /// Runtime and videos live only on the details endpoint, not in list
-  /// results. `append_to_response=videos` folds both into one request.
-  Future<({int? runtime, String? trailerUrl})> fetchDetails(int movieId) async {
+  /// Runtime, videos, tagline, and credits live only on the details endpoint,
+  /// not in list results. `append_to_response=videos,credits` folds them all
+  /// into the single per-candidate request we already make — no extra calls.
+  Future<
+    ({
+      int? runtime,
+      String? trailerUrl,
+      String? tagline,
+      String director,
+      List<String> cast,
+      List<String> writers,
+      List<String> producers,
+    })
+  >
+  fetchDetails(int movieId) async {
     final data = await _get('/movie/$movieId', const {
-      'append_to_response': 'videos',
+      'append_to_response': 'videos,credits',
     });
     final runtime = data['runtime'];
+    final tagline = data['tagline'];
+    final credits = data['credits'];
     return (
       runtime: runtime is int && runtime > 0 ? runtime : null,
       trailerUrl: _trailerUrlFrom(data['videos']),
+      tagline: tagline is String && tagline.isNotEmpty ? tagline : null,
+      director: _directorFrom(credits),
+      cast: _castFrom(credits),
+      writers: _crewByJobs(credits, const {
+        'Writer',
+        'Screenplay',
+        'Story',
+        'Author',
+      }),
+      producers: _crewByJobs(credits, const {'Producer'}),
     );
+  }
+
+  /// Top billed names; TMDB returns `cast` pre-sorted by billing order.
+  static const int _maxCast = 8;
+
+  /// Cap per crew role so a sprawling producer list doesn't dominate the view.
+  static const int _maxCrewPerRole = 3;
+
+  static List<Map<String, dynamic>> _crewList(Object? credits) {
+    if (credits is! Map<String, dynamic>) return const [];
+    final crew = credits['crew'];
+    return crew is List
+        ? crew.whereType<Map<String, dynamic>>().toList()
+        : const [];
+  }
+
+  static String _directorFrom(Object? credits) {
+    for (final member in _crewList(credits)) {
+      if (member['job'] == 'Director' && member['name'] is String) {
+        return member['name'] as String;
+      }
+    }
+    return '';
+  }
+
+  static List<String> _crewByJobs(Object? credits, Set<String> jobs) {
+    final names = <String>[];
+    for (final member in _crewList(credits)) {
+      if (jobs.contains(member['job']) && member['name'] is String) {
+        final name = member['name'] as String;
+        if (!names.contains(name)) names.add(name);
+        if (names.length >= _maxCrewPerRole) break;
+      }
+    }
+    return names;
+  }
+
+  static List<String> _castFrom(Object? credits) {
+    if (credits is! Map<String, dynamic>) return const [];
+    final cast = credits['cast'];
+    if (cast is! List) return const [];
+    return cast
+        .whereType<Map<String, dynamic>>()
+        .where((member) => member['name'] is String)
+        .take(_maxCast)
+        .map((member) => member['name'] as String)
+        .toList();
   }
 
   /// Best YouTube key from a /movie/{id}/videos payload: official trailer

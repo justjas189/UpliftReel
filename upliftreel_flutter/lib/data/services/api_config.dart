@@ -6,4 +6,14 @@ abstract final class ApiConfig {
     'TMDB_ACCESS_TOKEN',
   );
   static const String omdbApiKey = String.fromEnvironment('OMDB_API_KEY');
+
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+  );
+
+  /// Auth is optional: with no Supabase keys the app runs local-only and
+  /// the login sheet reports the missing configuration.
+  static const bool supabaseConfigured =
+      supabaseUrl != '' && supabaseAnonKey != '';
 }

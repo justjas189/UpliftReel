@@ -14,7 +14,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RecommendationContext {
 
- UserPreferences get userPreferences; MoodInput? get currentMood; List<String> get previousRecommendationIds; List<String> get watchedMovieIds;
+ UserPreferences get userPreferences; MoodInput? get currentMood; List<String> get previousRecommendationIds; List<String> get watchedMovieIds;/// Transient Era Selector overlay. Intersected with
+/// [UserPreferences.releaseYearRange] by the engine's hard filter; null
+/// means no era constraint (see [EraFilter.all]).
+ ReleaseYearRange? get eraRange;
 /// Create a copy of RecommendationContext
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +28,16 @@ $RecommendationContextCopyWith<RecommendationContext> get copyWith => _$Recommen
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RecommendationContext&&(identical(other.userPreferences, userPreferences) || other.userPreferences == userPreferences)&&(identical(other.currentMood, currentMood) || other.currentMood == currentMood)&&const DeepCollectionEquality().equals(other.previousRecommendationIds, previousRecommendationIds)&&const DeepCollectionEquality().equals(other.watchedMovieIds, watchedMovieIds));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RecommendationContext&&(identical(other.userPreferences, userPreferences) || other.userPreferences == userPreferences)&&(identical(other.currentMood, currentMood) || other.currentMood == currentMood)&&const DeepCollectionEquality().equals(other.previousRecommendationIds, previousRecommendationIds)&&const DeepCollectionEquality().equals(other.watchedMovieIds, watchedMovieIds)&&(identical(other.eraRange, eraRange) || other.eraRange == eraRange));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,userPreferences,currentMood,const DeepCollectionEquality().hash(previousRecommendationIds),const DeepCollectionEquality().hash(watchedMovieIds));
+int get hashCode => Object.hash(runtimeType,userPreferences,currentMood,const DeepCollectionEquality().hash(previousRecommendationIds),const DeepCollectionEquality().hash(watchedMovieIds),eraRange);
 
 @override
 String toString() {
-  return 'RecommendationContext(userPreferences: $userPreferences, currentMood: $currentMood, previousRecommendationIds: $previousRecommendationIds, watchedMovieIds: $watchedMovieIds)';
+  return 'RecommendationContext(userPreferences: $userPreferences, currentMood: $currentMood, previousRecommendationIds: $previousRecommendationIds, watchedMovieIds: $watchedMovieIds, eraRange: $eraRange)';
 }
 
 
@@ -45,11 +48,11 @@ abstract mixin class $RecommendationContextCopyWith<$Res>  {
   factory $RecommendationContextCopyWith(RecommendationContext value, $Res Function(RecommendationContext) _then) = _$RecommendationContextCopyWithImpl;
 @useResult
 $Res call({
- UserPreferences userPreferences, MoodInput? currentMood, List<String> previousRecommendationIds, List<String> watchedMovieIds
+ UserPreferences userPreferences, MoodInput? currentMood, List<String> previousRecommendationIds, List<String> watchedMovieIds, ReleaseYearRange? eraRange
 });
 
 
-$UserPreferencesCopyWith<$Res> get userPreferences;$MoodInputCopyWith<$Res>? get currentMood;
+$UserPreferencesCopyWith<$Res> get userPreferences;$MoodInputCopyWith<$Res>? get currentMood;$ReleaseYearRangeCopyWith<$Res>? get eraRange;
 
 }
 /// @nodoc
@@ -62,13 +65,14 @@ class _$RecommendationContextCopyWithImpl<$Res>
 
 /// Create a copy of RecommendationContext
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? userPreferences = null,Object? currentMood = freezed,Object? previousRecommendationIds = null,Object? watchedMovieIds = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? userPreferences = null,Object? currentMood = freezed,Object? previousRecommendationIds = null,Object? watchedMovieIds = null,Object? eraRange = freezed,}) {
   return _then(_self.copyWith(
 userPreferences: null == userPreferences ? _self.userPreferences : userPreferences // ignore: cast_nullable_to_non_nullable
 as UserPreferences,currentMood: freezed == currentMood ? _self.currentMood : currentMood // ignore: cast_nullable_to_non_nullable
 as MoodInput?,previousRecommendationIds: null == previousRecommendationIds ? _self.previousRecommendationIds : previousRecommendationIds // ignore: cast_nullable_to_non_nullable
 as List<String>,watchedMovieIds: null == watchedMovieIds ? _self.watchedMovieIds : watchedMovieIds // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,eraRange: freezed == eraRange ? _self.eraRange : eraRange // ignore: cast_nullable_to_non_nullable
+as ReleaseYearRange?,
   ));
 }
 /// Create a copy of RecommendationContext
@@ -91,6 +95,18 @@ $MoodInputCopyWith<$Res>? get currentMood {
 
   return $MoodInputCopyWith<$Res>(_self.currentMood!, (value) {
     return _then(_self.copyWith(currentMood: value));
+  });
+}/// Create a copy of RecommendationContext
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ReleaseYearRangeCopyWith<$Res>? get eraRange {
+    if (_self.eraRange == null) {
+    return null;
+  }
+
+  return $ReleaseYearRangeCopyWith<$Res>(_self.eraRange!, (value) {
+    return _then(_self.copyWith(eraRange: value));
   });
 }
 }
@@ -174,10 +190,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( UserPreferences userPreferences,  MoodInput? currentMood,  List<String> previousRecommendationIds,  List<String> watchedMovieIds)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( UserPreferences userPreferences,  MoodInput? currentMood,  List<String> previousRecommendationIds,  List<String> watchedMovieIds,  ReleaseYearRange? eraRange)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RecommendationContext() when $default != null:
-return $default(_that.userPreferences,_that.currentMood,_that.previousRecommendationIds,_that.watchedMovieIds);case _:
+return $default(_that.userPreferences,_that.currentMood,_that.previousRecommendationIds,_that.watchedMovieIds,_that.eraRange);case _:
   return orElse();
 
 }
@@ -195,10 +211,10 @@ return $default(_that.userPreferences,_that.currentMood,_that.previousRecommenda
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( UserPreferences userPreferences,  MoodInput? currentMood,  List<String> previousRecommendationIds,  List<String> watchedMovieIds)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( UserPreferences userPreferences,  MoodInput? currentMood,  List<String> previousRecommendationIds,  List<String> watchedMovieIds,  ReleaseYearRange? eraRange)  $default,) {final _that = this;
 switch (_that) {
 case _RecommendationContext():
-return $default(_that.userPreferences,_that.currentMood,_that.previousRecommendationIds,_that.watchedMovieIds);case _:
+return $default(_that.userPreferences,_that.currentMood,_that.previousRecommendationIds,_that.watchedMovieIds,_that.eraRange);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -215,10 +231,10 @@ return $default(_that.userPreferences,_that.currentMood,_that.previousRecommenda
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( UserPreferences userPreferences,  MoodInput? currentMood,  List<String> previousRecommendationIds,  List<String> watchedMovieIds)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( UserPreferences userPreferences,  MoodInput? currentMood,  List<String> previousRecommendationIds,  List<String> watchedMovieIds,  ReleaseYearRange? eraRange)?  $default,) {final _that = this;
 switch (_that) {
 case _RecommendationContext() when $default != null:
-return $default(_that.userPreferences,_that.currentMood,_that.previousRecommendationIds,_that.watchedMovieIds);case _:
+return $default(_that.userPreferences,_that.currentMood,_that.previousRecommendationIds,_that.watchedMovieIds,_that.eraRange);case _:
   return null;
 
 }
@@ -230,7 +246,7 @@ return $default(_that.userPreferences,_that.currentMood,_that.previousRecommenda
 
 
 class _RecommendationContext implements RecommendationContext {
-  const _RecommendationContext({required this.userPreferences, this.currentMood, final  List<String> previousRecommendationIds = const [], final  List<String> watchedMovieIds = const []}): _previousRecommendationIds = previousRecommendationIds,_watchedMovieIds = watchedMovieIds;
+  const _RecommendationContext({required this.userPreferences, this.currentMood, final  List<String> previousRecommendationIds = const [], final  List<String> watchedMovieIds = const [], this.eraRange}): _previousRecommendationIds = previousRecommendationIds,_watchedMovieIds = watchedMovieIds;
   
 
 @override final  UserPreferences userPreferences;
@@ -249,6 +265,10 @@ class _RecommendationContext implements RecommendationContext {
   return EqualUnmodifiableListView(_watchedMovieIds);
 }
 
+/// Transient Era Selector overlay. Intersected with
+/// [UserPreferences.releaseYearRange] by the engine's hard filter; null
+/// means no era constraint (see [EraFilter.all]).
+@override final  ReleaseYearRange? eraRange;
 
 /// Create a copy of RecommendationContext
 /// with the given fields replaced by the non-null parameter values.
@@ -260,16 +280,16 @@ _$RecommendationContextCopyWith<_RecommendationContext> get copyWith => __$Recom
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RecommendationContext&&(identical(other.userPreferences, userPreferences) || other.userPreferences == userPreferences)&&(identical(other.currentMood, currentMood) || other.currentMood == currentMood)&&const DeepCollectionEquality().equals(other._previousRecommendationIds, _previousRecommendationIds)&&const DeepCollectionEquality().equals(other._watchedMovieIds, _watchedMovieIds));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RecommendationContext&&(identical(other.userPreferences, userPreferences) || other.userPreferences == userPreferences)&&(identical(other.currentMood, currentMood) || other.currentMood == currentMood)&&const DeepCollectionEquality().equals(other._previousRecommendationIds, _previousRecommendationIds)&&const DeepCollectionEquality().equals(other._watchedMovieIds, _watchedMovieIds)&&(identical(other.eraRange, eraRange) || other.eraRange == eraRange));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,userPreferences,currentMood,const DeepCollectionEquality().hash(_previousRecommendationIds),const DeepCollectionEquality().hash(_watchedMovieIds));
+int get hashCode => Object.hash(runtimeType,userPreferences,currentMood,const DeepCollectionEquality().hash(_previousRecommendationIds),const DeepCollectionEquality().hash(_watchedMovieIds),eraRange);
 
 @override
 String toString() {
-  return 'RecommendationContext(userPreferences: $userPreferences, currentMood: $currentMood, previousRecommendationIds: $previousRecommendationIds, watchedMovieIds: $watchedMovieIds)';
+  return 'RecommendationContext(userPreferences: $userPreferences, currentMood: $currentMood, previousRecommendationIds: $previousRecommendationIds, watchedMovieIds: $watchedMovieIds, eraRange: $eraRange)';
 }
 
 
@@ -280,11 +300,11 @@ abstract mixin class _$RecommendationContextCopyWith<$Res> implements $Recommend
   factory _$RecommendationContextCopyWith(_RecommendationContext value, $Res Function(_RecommendationContext) _then) = __$RecommendationContextCopyWithImpl;
 @override @useResult
 $Res call({
- UserPreferences userPreferences, MoodInput? currentMood, List<String> previousRecommendationIds, List<String> watchedMovieIds
+ UserPreferences userPreferences, MoodInput? currentMood, List<String> previousRecommendationIds, List<String> watchedMovieIds, ReleaseYearRange? eraRange
 });
 
 
-@override $UserPreferencesCopyWith<$Res> get userPreferences;@override $MoodInputCopyWith<$Res>? get currentMood;
+@override $UserPreferencesCopyWith<$Res> get userPreferences;@override $MoodInputCopyWith<$Res>? get currentMood;@override $ReleaseYearRangeCopyWith<$Res>? get eraRange;
 
 }
 /// @nodoc
@@ -297,13 +317,14 @@ class __$RecommendationContextCopyWithImpl<$Res>
 
 /// Create a copy of RecommendationContext
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? userPreferences = null,Object? currentMood = freezed,Object? previousRecommendationIds = null,Object? watchedMovieIds = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? userPreferences = null,Object? currentMood = freezed,Object? previousRecommendationIds = null,Object? watchedMovieIds = null,Object? eraRange = freezed,}) {
   return _then(_RecommendationContext(
 userPreferences: null == userPreferences ? _self.userPreferences : userPreferences // ignore: cast_nullable_to_non_nullable
 as UserPreferences,currentMood: freezed == currentMood ? _self.currentMood : currentMood // ignore: cast_nullable_to_non_nullable
 as MoodInput?,previousRecommendationIds: null == previousRecommendationIds ? _self._previousRecommendationIds : previousRecommendationIds // ignore: cast_nullable_to_non_nullable
 as List<String>,watchedMovieIds: null == watchedMovieIds ? _self._watchedMovieIds : watchedMovieIds // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,eraRange: freezed == eraRange ? _self.eraRange : eraRange // ignore: cast_nullable_to_non_nullable
+as ReleaseYearRange?,
   ));
 }
 
@@ -328,6 +349,18 @@ $MoodInputCopyWith<$Res>? get currentMood {
   return $MoodInputCopyWith<$Res>(_self.currentMood!, (value) {
     return _then(_self.copyWith(currentMood: value));
   });
+}/// Create a copy of RecommendationContext
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ReleaseYearRangeCopyWith<$Res>? get eraRange {
+    if (_self.eraRange == null) {
+    return null;
+  }
+
+  return $ReleaseYearRangeCopyWith<$Res>(_self.eraRange!, (value) {
+    return _then(_self.copyWith(eraRange: value));
+  });
 }
 }
 
@@ -335,8 +368,15 @@ $MoodInputCopyWith<$Res>? get currentMood {
 /// @nodoc
 mixin _$RecommendationResult {
 
- Movie get movie;/// 0–100.
- double get matchScore; String get explanation; bool get isAlternative; String? get alternativeReason;
+ Movie get movie;/// Legacy weighted score, 0–100. Parity-locked; used for ranking and the
+/// explanation tier prefix.
+ double get matchScore; String get explanation; bool get isAlternative; String? get alternativeReason;/// Normalized compatibility 0–100: [matchScore] expressed as a percentage
+/// of the weight actually applicable to this user's mood + preferences.
+/// This is the number the 75% gate tests against.
+ double get compatibility;/// True when [compatibility] fell under the 75% threshold and this pick is
+/// the best available rather than a qualifying match — the UI surfaces a
+/// "below your bar" badge.
+ bool get isBelowThreshold;
 /// Create a copy of RecommendationResult
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -349,16 +389,16 @@ $RecommendationResultCopyWith<RecommendationResult> get copyWith => _$Recommenda
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RecommendationResult&&(identical(other.movie, movie) || other.movie == movie)&&(identical(other.matchScore, matchScore) || other.matchScore == matchScore)&&(identical(other.explanation, explanation) || other.explanation == explanation)&&(identical(other.isAlternative, isAlternative) || other.isAlternative == isAlternative)&&(identical(other.alternativeReason, alternativeReason) || other.alternativeReason == alternativeReason));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RecommendationResult&&(identical(other.movie, movie) || other.movie == movie)&&(identical(other.matchScore, matchScore) || other.matchScore == matchScore)&&(identical(other.explanation, explanation) || other.explanation == explanation)&&(identical(other.isAlternative, isAlternative) || other.isAlternative == isAlternative)&&(identical(other.alternativeReason, alternativeReason) || other.alternativeReason == alternativeReason)&&(identical(other.compatibility, compatibility) || other.compatibility == compatibility)&&(identical(other.isBelowThreshold, isBelowThreshold) || other.isBelowThreshold == isBelowThreshold));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,movie,matchScore,explanation,isAlternative,alternativeReason);
+int get hashCode => Object.hash(runtimeType,movie,matchScore,explanation,isAlternative,alternativeReason,compatibility,isBelowThreshold);
 
 @override
 String toString() {
-  return 'RecommendationResult(movie: $movie, matchScore: $matchScore, explanation: $explanation, isAlternative: $isAlternative, alternativeReason: $alternativeReason)';
+  return 'RecommendationResult(movie: $movie, matchScore: $matchScore, explanation: $explanation, isAlternative: $isAlternative, alternativeReason: $alternativeReason, compatibility: $compatibility, isBelowThreshold: $isBelowThreshold)';
 }
 
 
@@ -369,7 +409,7 @@ abstract mixin class $RecommendationResultCopyWith<$Res>  {
   factory $RecommendationResultCopyWith(RecommendationResult value, $Res Function(RecommendationResult) _then) = _$RecommendationResultCopyWithImpl;
 @useResult
 $Res call({
- Movie movie, double matchScore, String explanation, bool isAlternative, String? alternativeReason
+ Movie movie, double matchScore, String explanation, bool isAlternative, String? alternativeReason, double compatibility, bool isBelowThreshold
 });
 
 
@@ -386,14 +426,16 @@ class _$RecommendationResultCopyWithImpl<$Res>
 
 /// Create a copy of RecommendationResult
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? movie = null,Object? matchScore = null,Object? explanation = null,Object? isAlternative = null,Object? alternativeReason = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? movie = null,Object? matchScore = null,Object? explanation = null,Object? isAlternative = null,Object? alternativeReason = freezed,Object? compatibility = null,Object? isBelowThreshold = null,}) {
   return _then(_self.copyWith(
 movie: null == movie ? _self.movie : movie // ignore: cast_nullable_to_non_nullable
 as Movie,matchScore: null == matchScore ? _self.matchScore : matchScore // ignore: cast_nullable_to_non_nullable
 as double,explanation: null == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
 as String,isAlternative: null == isAlternative ? _self.isAlternative : isAlternative // ignore: cast_nullable_to_non_nullable
 as bool,alternativeReason: freezed == alternativeReason ? _self.alternativeReason : alternativeReason // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,compatibility: null == compatibility ? _self.compatibility : compatibility // ignore: cast_nullable_to_non_nullable
+as double,isBelowThreshold: null == isBelowThreshold ? _self.isBelowThreshold : isBelowThreshold // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of RecommendationResult
@@ -487,10 +529,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Movie movie,  double matchScore,  String explanation,  bool isAlternative,  String? alternativeReason)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Movie movie,  double matchScore,  String explanation,  bool isAlternative,  String? alternativeReason,  double compatibility,  bool isBelowThreshold)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RecommendationResult() when $default != null:
-return $default(_that.movie,_that.matchScore,_that.explanation,_that.isAlternative,_that.alternativeReason);case _:
+return $default(_that.movie,_that.matchScore,_that.explanation,_that.isAlternative,_that.alternativeReason,_that.compatibility,_that.isBelowThreshold);case _:
   return orElse();
 
 }
@@ -508,10 +550,10 @@ return $default(_that.movie,_that.matchScore,_that.explanation,_that.isAlternati
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Movie movie,  double matchScore,  String explanation,  bool isAlternative,  String? alternativeReason)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Movie movie,  double matchScore,  String explanation,  bool isAlternative,  String? alternativeReason,  double compatibility,  bool isBelowThreshold)  $default,) {final _that = this;
 switch (_that) {
 case _RecommendationResult():
-return $default(_that.movie,_that.matchScore,_that.explanation,_that.isAlternative,_that.alternativeReason);case _:
+return $default(_that.movie,_that.matchScore,_that.explanation,_that.isAlternative,_that.alternativeReason,_that.compatibility,_that.isBelowThreshold);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -528,10 +570,10 @@ return $default(_that.movie,_that.matchScore,_that.explanation,_that.isAlternati
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Movie movie,  double matchScore,  String explanation,  bool isAlternative,  String? alternativeReason)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Movie movie,  double matchScore,  String explanation,  bool isAlternative,  String? alternativeReason,  double compatibility,  bool isBelowThreshold)?  $default,) {final _that = this;
 switch (_that) {
 case _RecommendationResult() when $default != null:
-return $default(_that.movie,_that.matchScore,_that.explanation,_that.isAlternative,_that.alternativeReason);case _:
+return $default(_that.movie,_that.matchScore,_that.explanation,_that.isAlternative,_that.alternativeReason,_that.compatibility,_that.isBelowThreshold);case _:
   return null;
 
 }
@@ -543,15 +585,24 @@ return $default(_that.movie,_that.matchScore,_that.explanation,_that.isAlternati
 @JsonSerializable()
 
 class _RecommendationResult implements RecommendationResult {
-  const _RecommendationResult({required this.movie, required this.matchScore, required this.explanation, required this.isAlternative, this.alternativeReason});
+  const _RecommendationResult({required this.movie, required this.matchScore, required this.explanation, required this.isAlternative, this.alternativeReason, this.compatibility = 0.0, this.isBelowThreshold = false});
   factory _RecommendationResult.fromJson(Map<String, dynamic> json) => _$RecommendationResultFromJson(json);
 
 @override final  Movie movie;
-/// 0–100.
+/// Legacy weighted score, 0–100. Parity-locked; used for ranking and the
+/// explanation tier prefix.
 @override final  double matchScore;
 @override final  String explanation;
 @override final  bool isAlternative;
 @override final  String? alternativeReason;
+/// Normalized compatibility 0–100: [matchScore] expressed as a percentage
+/// of the weight actually applicable to this user's mood + preferences.
+/// This is the number the 75% gate tests against.
+@override@JsonKey() final  double compatibility;
+/// True when [compatibility] fell under the 75% threshold and this pick is
+/// the best available rather than a qualifying match — the UI surfaces a
+/// "below your bar" badge.
+@override@JsonKey() final  bool isBelowThreshold;
 
 /// Create a copy of RecommendationResult
 /// with the given fields replaced by the non-null parameter values.
@@ -566,16 +617,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RecommendationResult&&(identical(other.movie, movie) || other.movie == movie)&&(identical(other.matchScore, matchScore) || other.matchScore == matchScore)&&(identical(other.explanation, explanation) || other.explanation == explanation)&&(identical(other.isAlternative, isAlternative) || other.isAlternative == isAlternative)&&(identical(other.alternativeReason, alternativeReason) || other.alternativeReason == alternativeReason));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RecommendationResult&&(identical(other.movie, movie) || other.movie == movie)&&(identical(other.matchScore, matchScore) || other.matchScore == matchScore)&&(identical(other.explanation, explanation) || other.explanation == explanation)&&(identical(other.isAlternative, isAlternative) || other.isAlternative == isAlternative)&&(identical(other.alternativeReason, alternativeReason) || other.alternativeReason == alternativeReason)&&(identical(other.compatibility, compatibility) || other.compatibility == compatibility)&&(identical(other.isBelowThreshold, isBelowThreshold) || other.isBelowThreshold == isBelowThreshold));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,movie,matchScore,explanation,isAlternative,alternativeReason);
+int get hashCode => Object.hash(runtimeType,movie,matchScore,explanation,isAlternative,alternativeReason,compatibility,isBelowThreshold);
 
 @override
 String toString() {
-  return 'RecommendationResult(movie: $movie, matchScore: $matchScore, explanation: $explanation, isAlternative: $isAlternative, alternativeReason: $alternativeReason)';
+  return 'RecommendationResult(movie: $movie, matchScore: $matchScore, explanation: $explanation, isAlternative: $isAlternative, alternativeReason: $alternativeReason, compatibility: $compatibility, isBelowThreshold: $isBelowThreshold)';
 }
 
 
@@ -586,7 +637,7 @@ abstract mixin class _$RecommendationResultCopyWith<$Res> implements $Recommenda
   factory _$RecommendationResultCopyWith(_RecommendationResult value, $Res Function(_RecommendationResult) _then) = __$RecommendationResultCopyWithImpl;
 @override @useResult
 $Res call({
- Movie movie, double matchScore, String explanation, bool isAlternative, String? alternativeReason
+ Movie movie, double matchScore, String explanation, bool isAlternative, String? alternativeReason, double compatibility, bool isBelowThreshold
 });
 
 
@@ -603,14 +654,16 @@ class __$RecommendationResultCopyWithImpl<$Res>
 
 /// Create a copy of RecommendationResult
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? movie = null,Object? matchScore = null,Object? explanation = null,Object? isAlternative = null,Object? alternativeReason = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? movie = null,Object? matchScore = null,Object? explanation = null,Object? isAlternative = null,Object? alternativeReason = freezed,Object? compatibility = null,Object? isBelowThreshold = null,}) {
   return _then(_RecommendationResult(
 movie: null == movie ? _self.movie : movie // ignore: cast_nullable_to_non_nullable
 as Movie,matchScore: null == matchScore ? _self.matchScore : matchScore // ignore: cast_nullable_to_non_nullable
 as double,explanation: null == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
 as String,isAlternative: null == isAlternative ? _self.isAlternative : isAlternative // ignore: cast_nullable_to_non_nullable
 as bool,alternativeReason: freezed == alternativeReason ? _self.alternativeReason : alternativeReason // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,compatibility: null == compatibility ? _self.compatibility : compatibility // ignore: cast_nullable_to_non_nullable
+as double,isBelowThreshold: null == isBelowThreshold ? _self.isBelowThreshold : isBelowThreshold // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/models/recommendation.dart';
+import 'era_filter_controller.dart';
 import 'mood_controller.dart';
 import 'preferences_controller.dart';
 import 'providers.dart';
@@ -15,7 +16,14 @@ class RecommendationController extends AsyncNotifier<RecommendationResult?> {
 
   @override
   Future<RecommendationResult?> build() async {
-    return ref.watch(historyRepositoryProvider).todaysPick();
+    final history = ref.watch(historyRepositoryProvider);
+    // Hydrate the local ledgers from the cloud at session start. Best-effort:
+    // a no-op offline or when Supabase isn't configured. Watching the repo
+    // means a sign-in/out (uid change) re-runs build against the new user's
+    // namespace, so the restored pick is always the right account's.
+    await history.pull();
+    await ref.watch(moodRepositoryProvider).pull();
+    return history.todaysPick();
   }
 
   Future<void> generate() async {
@@ -26,12 +34,17 @@ class RecommendationController extends AsyncNotifier<RecommendationResult?> {
   Future<RecommendationResult?> _generate() async {
     final preferences = await ref.read(preferencesControllerProvider.future);
     final mood = ref.read(moodControllerProvider);
+    final era = ref.read(eraFilterControllerProvider);
     final history = ref.read(historyRepositoryProvider);
     final movieRepository = ref.read(movieRepositoryProvider);
     final engine = ref.read(recommendationEngineProvider);
 
+    // Era is parsed into the TMDB payload (server-side date window) AND into
+    // the engine context (hard filter), so the pool is era-correct on every
+    // path including English /movie/popular.
     final candidates = await movieRepository.getDailyCandidates(
       language: preferences.preferredLanguage,
+      era: era,
     );
     final recommendationIds = history.recommendationIds();
 
@@ -42,6 +55,7 @@ class RecommendationController extends AsyncNotifier<RecommendationResult?> {
           ? recommendationIds.sublist(recommendationIds.length - _recencyWindow)
           : recommendationIds,
       watchedMovieIds: history.watchedIds(),
+      eraRange: era.toRange(),
     );
 
     var result = engine.findBestMatch(context, candidates);

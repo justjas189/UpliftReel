@@ -77,6 +77,17 @@ abstract class Movie with _$Movie {
     required String director,
     required List<String> actors,
     required List<MoodTag> moodTags,
+
+    /// Production-crew enrichment, sourced from TMDB `credits` (writers/
+    /// producers) and the TMDB details `tagline`. Optional/defaulted so cached
+    /// movies persisted before this field existed still deserialize.
+    @Default(<String>[]) List<String> writers,
+    @Default(<String>[]) List<String> producers,
+    String? tagline,
+
+    /// OMDb `Awards` blurb for the selected pick ("Won 2 Oscars. 5 wins &
+    /// 12 nominations."). Null when OMDb has none or wasn't queried.
+    String? awards,
     String? trailerUrl,
     String? posterUrl,
     String? backdropUrl,

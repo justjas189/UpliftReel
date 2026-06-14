@@ -15,6 +15,11 @@ abstract class RecommendationContext with _$RecommendationContext {
     MoodInput? currentMood,
     @Default([]) List<String> previousRecommendationIds,
     @Default([]) List<String> watchedMovieIds,
+
+    /// Transient Era Selector overlay. Intersected with
+    /// [UserPreferences.releaseYearRange] by the engine's hard filter; null
+    /// means no era constraint (see [EraFilter.all]).
+    ReleaseYearRange? eraRange,
   }) = _RecommendationContext;
 }
 
@@ -24,11 +29,22 @@ abstract class RecommendationResult with _$RecommendationResult {
   const factory RecommendationResult({
     required Movie movie,
 
-    /// 0–100.
+    /// Legacy weighted score, 0–100. Parity-locked; used for ranking and the
+    /// explanation tier prefix.
     required double matchScore,
     required String explanation,
     required bool isAlternative,
     String? alternativeReason,
+
+    /// Normalized compatibility 0–100: [matchScore] expressed as a percentage
+    /// of the weight actually applicable to this user's mood + preferences.
+    /// This is the number the 75% gate tests against.
+    @Default(0.0) double compatibility,
+
+    /// True when [compatibility] fell under the 75% threshold and this pick is
+    /// the best available rather than a qualifying match — the UI surfaces a
+    /// "below your bar" badge.
+    @Default(false) bool isBelowThreshold,
   }) = _RecommendationResult;
 
   factory RecommendationResult.fromJson(Map<String, dynamic> json) =>

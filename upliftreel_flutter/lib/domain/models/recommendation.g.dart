@@ -14,6 +14,8 @@ _RecommendationResult _$RecommendationResultFromJson(
   explanation: json['explanation'] as String,
   isAlternative: json['isAlternative'] as bool,
   alternativeReason: json['alternativeReason'] as String?,
+  compatibility: (json['compatibility'] as num?)?.toDouble() ?? 0.0,
+  isBelowThreshold: json['isBelowThreshold'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$RecommendationResultToJson(
@@ -24,4 +26,6 @@ Map<String, dynamic> _$RecommendationResultToJson(
   'explanation': instance.explanation,
   'isAlternative': instance.isAlternative,
   'alternativeReason': instance.alternativeReason,
+  'compatibility': instance.compatibility,
+  'isBelowThreshold': instance.isBelowThreshold,
 };

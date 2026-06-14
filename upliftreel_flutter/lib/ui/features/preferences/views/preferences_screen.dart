@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../domain/models/movie.dart';
 import '../../../../domain/models/user_preferences.dart';
+import '../../../../state/era_filter_controller.dart';
 import '../../../../state/preferences_controller.dart';
+import '../../../../state/recommendation_controller.dart';
 import '../../../core/format.dart';
 import '../../../core/theme/stitch_theme.dart';
+import '../../../core/widgets/era_selector.dart';
 import '../../../core/widgets/stitch_button.dart';
 import '../../../core/widgets/stitch_movie_card.dart';
 
@@ -136,6 +139,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
     final moodTheme = StitchMoodTheme.of(context);
     final textTheme = Theme.of(context).textTheme;
     final persistedAsync = ref.watch(preferencesControllerProvider);
+    final era = ref.watch(eraFilterControllerProvider);
 
     // Reseed the draft when persistence changes underneath us (reset, save).
     ref.listen(preferencesControllerProvider, (previous, next) {
@@ -241,6 +245,15 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                 ],
               ),
               const SizedBox(height: StitchSpacing.xl),
+              // Relocated from Home: a transient release-window overlay. Picking
+              // an era regenerates the pick so the link to the engine stays
+              // live even though it isn't part of the persisted draft.
+              EraSelector(
+                onChanged: (_) => ref
+                    .read(recommendationControllerProvider.notifier)
+                    .generate(),
+              ),
+              const SizedBox(height: StitchSpacing.xl),
               Text('PREFERRED MOVIE LANGUAGE', style: textTheme.labelSmall),
               const SizedBox(height: StitchSpacing.sm),
               Wrap(
@@ -317,6 +330,11 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                     _SummaryRow(
                       text:
                           '${kPreferredLanguages[draft.preferredLanguage] ?? draft.preferredLanguage} movies',
+                    ),
+                    _SummaryRow(
+                      text: era.isAll
+                          ? 'All release years'
+                          : '${era.label} releases',
                     ),
                     _SummaryRow(text: 'Reminder at ${draft.notificationTime}'),
                   ],

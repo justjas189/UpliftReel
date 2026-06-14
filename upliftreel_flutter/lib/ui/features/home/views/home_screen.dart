@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../../domain/models/mood.dart';
 import '../../../../domain/models/recommendation.dart';
 import '../../../../state/mood_controller.dart';
 import '../../../../state/recommendation_controller.dart';
+import '../../../../state/watched_movies_controller.dart';
 import '../../../core/launch_trailer.dart';
 import '../../../core/theme/stitch_mood_icons.dart';
 import '../../../core/theme/stitch_theme.dart';
+import '../../../core/widgets/share_movie_button.dart';
 import '../../../core/widgets/stitch_button.dart';
 import '../../../core/widgets/stitch_movie_card.dart';
 import '../../../core/widgets/stitch_movie_hero.dart';
@@ -161,8 +162,13 @@ class _PickSection extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
     final movie = result.movie;
     final controller = ref.read(recommendationControllerProvider.notifier);
+    final isWatched = ref.watch(watchedMoviesProvider).contains(movie.id);
 
     final children = [
+      if (result.isBelowThreshold) ...[
+        _BelowThresholdBadge(compatibility: result.compatibility),
+        const SizedBox(height: StitchSpacing.sm),
+      ],
       StitchMovieHero(
         movie: movie,
         matchScore: result.matchScore,
@@ -223,23 +229,25 @@ class _PickSection extends ConsumerWidget {
       ),
       const SizedBox(height: StitchSpacing.sm),
       StitchButton(
-        label: 'Watched it',
+        label: isWatched ? 'Watched ✓' : 'Watched it',
         variant: StitchButtonVariant.mood,
-        icon: Icons.check,
+        icon: isWatched ? null : Icons.check,
         expand: true,
-        onPressed: () async {
-          await controller.markWatched();
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Saved to history'),
-              action: SnackBarAction(
-                label: 'View history',
-                onPressed: () => context.push('/history'),
-              ),
-            ),
-          );
-        },
+        onPressed: isWatched
+            ? null
+            : () async {
+                await controller.markWatched();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Saved to history'),
+                    action: SnackBarAction(
+                      label: 'View history',
+                      onPressed: () => context.push('/history'),
+                    ),
+                  ),
+                );
+              },
       ),
       const SizedBox(height: StitchSpacing.xs),
       Row(
@@ -250,17 +258,10 @@ class _PickSection extends ConsumerWidget {
             variant: StitchButtonVariant.ghost,
             onPressed: controller.skip,
           ),
-          StitchButton(
-            label: 'Share',
+          ShareMovieButton(
+            movie: movie,
             variant: StitchButtonVariant.ghost,
-            onPressed: () => SharePlus.instance.share(
-              ShareParams(
-                text:
-                    'Uplift Reel pick: ${movie.title} '
-                    '(${movie.releaseYear}) — IMDb '
-                    '${movie.imdbRating.toStringAsFixed(1)}',
-              ),
-            ),
+            icon: null,
           ),
         ],
       ),
@@ -276,6 +277,49 @@ class _PickSection extends ConsumerWidget {
             duration: StitchMotion.reveal,
             curve: StitchMotion.easeOut,
           ),
+    );
+  }
+}
+
+/// Surfaced when the engine couldn't clear the 75% match bar and is showing
+/// the best available pick instead of a qualifying one.
+class _BelowThresholdBadge extends StatelessWidget {
+  const _BelowThresholdBadge({required this.compatibility});
+
+  final double compatibility;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StitchColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: StitchSpacing.md,
+        vertical: StitchSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          colors.danger.withValues(alpha: 0.12),
+          colors.charcoal,
+        ),
+        borderRadius: BorderRadius.circular(StitchRadius.md),
+        border: Border.all(color: colors.danger.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 18, color: colors.danger),
+          const SizedBox(width: StitchSpacing.sm),
+          Expanded(
+            child: Text(
+              'Below your 75% bar — best available at '
+              '${compatibility.round()}% match. Loosen filters or change your '
+              'mood for a stronger pick.',
+              style: textTheme.bodySmall?.copyWith(color: colors.parchment),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
